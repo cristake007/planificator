@@ -3,6 +3,7 @@ import pandas as pd
 import random
 import os
 import io
+import calendar
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import xml.etree.ElementTree as ET
@@ -187,61 +188,88 @@ def generate_schedule():
         schedule = []
 
         # Only process selected months
+        unscheduled_courses = {}
         for month in selected_months:
             scheduled_dates = set()
-            
+            month_unscheduled = set()
+
             # Process courses in original order
             for _, row in df.iterrows():
                 duration = int(row['duration'])
                 available_dates = scheduler.get_available_start_days(month, duration)
-                
+
                 if available_dates:
                     # Remove dates too close to already scheduled dates based on randomness
                     min_gap = max(1, (11 - randomness_level))
                     filtered_dates = []
-                    
+
                     for date in available_dates:
-                        if not any(abs((date - scheduled).days) < min_gap 
+                        if not any(abs((date - scheduled).days) < min_gap
                                  for scheduled in scheduled_dates):
                             filtered_dates.append(date)
-                    
+
                     # If no dates available with minimum gap, use any available date
                     dates_to_use = filtered_dates if filtered_dates else available_dates
-                    
-                        if dates_to_use:
-                            if randomness_level > 7:
-                                start_date = random.choice(dates_to_use)
-                            else:
-                                # Calculate weights based on position and randomness
-                                num_dates = len(dates_to_use)
-                                weights = []
 
-                                for i in range(num_dates):
-                                    if randomness_level <= 3:
-                                        if i < 5:  # First week
-                                            weight = 0.5
-                                        else:
-                                            weight = 1.0
-                                    elif randomness_level <= 6:
-                                        mid_point = num_dates // 2
-                                        weight = 1.0 - (abs(i - mid_point) / num_dates) * 0.5
+                    if dates_to_use:
+                        if randomness_level > 7:
+                            start_date = random.choice(dates_to_use)
+                        else:
+                            # Calculate weights based on position and randomness
+                            num_dates = len(dates_to_use)
+                            weights = []
+
+                            for i in range(num_dates):
+                                if randomness_level <= 3:
+                                    if i < 5:  # First week
+                                        weight = 0.5
                                     else:
-                                        weight = 0.8 + random.random() * 0.4
+                                        weight = 1.0
+                                elif randomness_level <= 6:
+                                    mid_point = num_dates // 2
+                                    weight = 1.0 - (abs(i - mid_point) / num_dates) * 0.5
+                                else:
+                                    weight = 0.8 + random.random() * 0.4
 
-                                    weights.append(weight)
+                                weights.append(weight)
 
-                                start_date = random.choices(dates_to_use, weights=weights, k=1)[0]
+                            start_date = random.choices(dates_to_use, weights=weights, k=1)[0]
 
-                            schedule.append({
-                                'Title': row['Title'],
-                                'Permalink': row['Permalink'],
-                                'Durata Curs': row['Durata Curs'],
-                                'date_range': scheduler.format_date_range(start_date, duration),
-                                'month': month,
-                                'original_order': int(row['original_order']),
-                            })
-                        
+                        schedule.append({
+                            'Title': row['Title'],
+                            'Permalink': row['Permalink'],
+                            'Durata Curs': row['Durata Curs'],
+                            'date_range': scheduler.format_date_range(start_date, duration),
+                            'month': month,
+                            'original_order': int(row['original_order']),
+                        })
+
                         scheduled_dates.add(start_date)
+                    else:
+                        course_identifier = str(row['Title']).strip() or f"Course #{int(row['original_order'])}"
+                        month_unscheduled.add(course_identifier)
+                else:
+                    course_identifier = str(row['Title']).strip() or f"Course #{int(row['original_order'])}"
+                    month_unscheduled.add(course_identifier)
+
+            if month_unscheduled:
+                unscheduled_courses[month] = sorted(month_unscheduled)
+
+        if unscheduled_courses:
+            month_messages = []
+            for month, courses in unscheduled_courses.items():
+                month_name = calendar.month_name[month]
+                month_messages.append(f"{month_name}: {', '.join(courses)}")
+
+            error_message = (
+                "Unable to schedule all courses with the current constraints. "
+                "The following courses had no available dates:\n" + "\n".join(month_messages)
+            )
+            return jsonify({
+                'success': False,
+                'error': error_message,
+                'unscheduled_courses': unscheduled_courses
+            }), 400
 
         # Sort by month, then by course name within each month
         schedule.sort(key=lambda x: x.get('original_order', 0))
