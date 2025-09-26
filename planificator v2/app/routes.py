@@ -208,37 +208,38 @@ def generate_schedule():
                     # If no dates available with minimum gap, use any available date
                     dates_to_use = filtered_dates if filtered_dates else available_dates
                     
-                    if dates_to_use:
-                        if randomness_level > 7:
-                            start_date = random.choice(dates_to_use)
-                        else:
-                            # Calculate weights based on position and randomness
-                            num_dates = len(dates_to_use)
-                            weights = []
-                            
-                            for i in range(num_dates):
-                                if randomness_level <= 3:
-                                    if i < 5:  # First week
-                                        weight = 0.5
+                        if dates_to_use:
+                            if randomness_level > 7:
+                                start_date = random.choice(dates_to_use)
+                            else:
+                                # Calculate weights based on position and randomness
+                                num_dates = len(dates_to_use)
+                                weights = []
+
+                                for i in range(num_dates):
+                                    if randomness_level <= 3:
+                                        if i < 5:  # First week
+                                            weight = 0.5
+                                        else:
+                                            weight = 1.0
+                                    elif randomness_level <= 6:
+                                        mid_point = num_dates // 2
+                                        weight = 1.0 - (abs(i - mid_point) / num_dates) * 0.5
                                     else:
-                                        weight = 1.0
-                                elif randomness_level <= 6:
-                                    mid_point = num_dates // 2
-                                    weight = 1.0 - (abs(i - mid_point) / num_dates) * 0.5
-                                else:
-                                    weight = 0.8 + random.random() * 0.4
-                                
-                                weights.append(weight)
-                            
-                            start_date = random.choices(dates_to_use, weights=weights, k=1)[0]
-                        
-                        schedule.append({
-                            'Title': row['Title'],
-                            'Permalink': row['Permalink'],
-                            'Durata Curs': row['Durata Curs'],
-                            'date_range': scheduler.format_date_range(start_date, duration),
-                            'month': month,
-                        })
+                                        weight = 0.8 + random.random() * 0.4
+
+                                    weights.append(weight)
+
+                                start_date = random.choices(dates_to_use, weights=weights, k=1)[0]
+
+                            schedule.append({
+                                'Title': row['Title'],
+                                'Permalink': row['Permalink'],
+                                'Durata Curs': row['Durata Curs'],
+                                'date_range': scheduler.format_date_range(start_date, duration),
+                                'month': month,
+                                'original_order': int(row['original_order']),
+                            })
                         
                         scheduled_dates.add(start_date)
 
