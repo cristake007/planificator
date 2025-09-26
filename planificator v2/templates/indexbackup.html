@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Schedule Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin-top: 2rem;
+        }
+
+        .schedule-table {
+            margin-top: 2rem;
+        }
+
+        .month-section {
+            margin-top: 2rem;
+        }
+
+        .holiday-tag {
+            display: inline-block;
+            background: #f8d7da;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .holiday-container {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .table-responsive-wrapper {
+            position: relative;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .top-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .top-scroll-inner {
+            height: 20px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: -20px;
+            padding-top: 20px;
+        }
+
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .table th,
+        .table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            white-space: nowrap;
+            min-width: 150px;
+            background-color: inherit;
+        }
+
+        .table th:first-child,
+        .table td:first-child {
+            position: sticky;
+            left: 0;
+            min-width: 600px;
+            width: auto;
+            text-wrap: auto;
+            border-right: 2px solid #dee2e6;
+            background-color: inherit;
+            z-index: 10;
+        }
+
+        .table th:nth-child(2),
+        .table td:nth-child(2) {
+            position: sticky;
+            left: 600px;
+            width: 80px;
+            min-width: 80px;
+            text-align: center;
+            border-right: 2px solid #dee2e6;
+            background-color: inherit;
+            z-index: 6;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa !important;
+            z-index: 2;
+        }
+
+        .table thead th:first-child,
+        .table thead th:nth-child(2) {
+            z-index: 3;
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: #f8f9fa;
+        }
+
+        .table-striped > tbody > tr:nth-of-type(even) {
+            background-color: white;
+        }
+
+        .table td:nth-child(3),
+        .table th:nth-child(3) {
+            border-left: none;
+            box-shadow: -3px 0 5px -3px rgba(0,0,0,0.15);
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) td:first-child,
+        .table-striped > tbody > tr:nth-of-type(odd) td:nth-child(2) {
+            background-color: #f8f9fa;
+        }
+
+        .table-striped > tbody > tr:nth-of-type(even) td:first-child,
+        .table-striped > tbody > tr:nth-of-type(even) td:nth-child(2) {
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Course Schedule Generator</h1>
+        <form id="scheduleForm" class="mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="inputFile" class="form-label">Input File (CSV or Excel)</label>
+                        <input type="file" class="form-control" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="year" class="form-label">Year</label>
+                        <input type="number" class="form-control" id="year" min="2024" max="2030" value="2024" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="mb-3">
+                    <label class="form-label">Select Months</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="1" id="month1">
+                            <label class="form-check-label" for="month1">January</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="2" id="month2">
+                            <label class="form-check-label" for="month2">February</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="3" id="month3">
+                            <label class="form-check-label" for="month3">March</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="4" id="month4">
+                            <label class="form-check-label" for="month4">April</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="5" id="month5">
+                            <label class="form-check-label" for="month5">May</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="6" id="month6">
+                            <label class="form-check-label" for="month6">June</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="7" id="month7">
+                            <label class="form-check-label" for="month7">July</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="8" id="month8">
+                            <label class="form-check-label" for="month8">August</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="9" id="month9">
+                            <label class="form-check-label" for="month9">September</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="10" id="month10">
+                            <label class="form-check-label" for="month10">October</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="11" id="month11">
+                            <label class="form-check-label" for="month11">November</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input month-checkbox" type="checkbox" value="12" id="month12">
+                            <label class="form-check-label" for="month12">December</label>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllMonths()">Select All</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="deselectAllMonths()">Deselect All</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="randomness" class="form-label">Randomness Level (1-10)</label>
+                    <div class="d-flex align-items-center">
+                        <input type="range" class="form-range flex-grow-1" id="randomness" min="1" max="10" value="5">
+                        <span class="ms-2" id="randomnessValue">5</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Romanian Holidays (Optional)</label>
+                <div class="holiday-container">
+                    <div id="holidayList"></div>
+                    <div class="input-group mt-2">
+                        <textarea class="form-control" id="holidayInput" placeholder="Enter dates (DD.MM.YYYY) separated by commas or new lines" rows="3"></textarea>
+                        <button type="button" class="btn btn-secondary" onclick="addHolidays()">Add Holidays</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col">
+                    <button type="submit" class="btn btn-primary">Generate Schedule</button>
+                    <button type="button" class="btn btn-success ms-2" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
+                    <button type="button" class="btn btn-info ms-2" onclick="exportXML()" style="display: none;" id="exportXMLBtn">Export to XML</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Loading spinner -->
+        <div id="loadingSpinner" style="display: none;" class="text-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Generating schedule...</p>
+        </div>
+
+        <!-- Error alert -->
+        <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;" role="alert"></div>
+
+        <div id="courseCounter" class="alert alert-info mt-3" style="display: none;" role="alert"></div>
+
+        <!-- Schedule Results -->
+        <div id="scheduleResult" style="display: none;">
+            <h2>Generated Schedule</h2>
+            <div class="table-responsive-wrapper">
+                <div class="top-scroll">
+                    <div class="top-scroll-inner"></div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Course Name</th>
+                                <th>Days</th>
+                                <th>January</th>
+                                <th>February</th>
+                                <th>March</th>
+                                <th>April</th>
+                                <th>May</th>
+                                <th>June</th>
+                                <th>July</th>
+                                <th>August</th>
+                                <th>September</th>
+                                <th>October</th>
+                                <th>November</th>
+                                <th>December</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- Schedule rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let holidays = [];
+        let generatedSchedule = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const topScroll = document.querySelector('.top-scroll');
+            const tableWrapper = document.querySelector('.table-wrapper');
+
+            function updateScroller() {
+                const tableWidth = document.querySelector('.table').offsetWidth;
+                document.querySelector('.top-scroll-inner').style.width = tableWidth + 'px';
+            }
+
+            topScroll.addEventListener('scroll', function() {
+                tableWrapper.scrollLeft = topScroll.scrollLeft;
+            });
+
+            tableWrapper.addEventListener('scroll', function() {
+                topScroll.scrollLeft = tableWrapper.scrollLeft;
+            });
+
+            window.addEventListener('resize', updateScroller);
+            updateScroller();
+        });
+
+        function selectAllMonths() {
+            document.querySelectorAll('.month-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        function deselectAllMonths() {
+            document.querySelectorAll('.month-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        function addHolidays() {
+            const input = document.getElementById('holidayInput');
+            const dates = input.value
+                .split(/[\n,]/)
+                .map(d => d.trim())
+                .filter(d => d.length > 0);
+
+            for (const date of dates) {
+                if (isValidDate(date) && !holidays.includes(date)) {
+                    holidays.push(date);
+                }
+            }
+            updateHolidayDisplay();
+            input.value = '';
+        }
+
+        function removeHoliday(index) {
+            holidays.splice(index, 1);
+            updateHolidayDisplay();
+        }
+
+        function updateHolidayDisplay() {
+            const container = document.getElementById('holidayList');
+            container.innerHTML = holidays.map((date, index) => `
+                <span class="holiday-tag">
+                    ${date}
+                    <button type="button" class="btn-close ms-1" style="font-size: 0.5rem;" onclick="removeHoliday(${index})"></button>
+                </span>
+            `).join(' ');
+        }
+
+        function isValidDate(dateStr) {
+            const regex = /^\d{2}\.\d{2}\.\d{4}$/;
+            if (!regex.test(dateStr)) return false;
+
+            const parts = dateStr.split('.');
+            const date = new Date(parts[2], parts[1] - 1, parts[0]);
+            return date instanceof Date && !isNaN(date);
+        }
+
+        document.getElementById('randomness').addEventListener('input', function() {
+            document.getElementById('randomnessValue').textContent = this.value;
+        });
+
+        async function exportXML() {
+    try {
+        const response = await fetch('/export_xml', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                schedule: generatedSchedule,
+                year: document.getElementById('year').value
+            })
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `course_schedule_${document.getElementById('year').value}.xml`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            throw new Error('XML export failed');
+        }
+    } catch (error) {
+        console.error('Error exporting XML:', error);
+        document.getElementById('errorAlert').textContent = 'Error exporting XML: ' + error.message;
+        document.getElementById('errorAlert').style.display = 'block';
+    }
+}
+
+        async function exportSchedule() {
+            try {
+                const response = await fetch('/export_schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    schedule: generatedSchedule,
+                    year: document.getElementById('year').value,
+                    holidays: holidays
+                })
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `course_schedule_${document.getElementById('year').value}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                throw new Error('Export failed');
+            }
+        } catch (error) {
+            console.error('Error exporting schedule:', error);
+            document.getElementById('errorAlert').textContent = 'Error exporting schedule: ' + error.message;
+            document.getElementById('errorAlert').style.display = 'block';
+        }
+    }
+
+    function displaySchedule(schedule) {
+        const tableBody = document.getElementById('scheduleTableBody');
+        tableBody.innerHTML = '';
+
+        // Group by course name
+        const courseSchedules = {};
+        schedule.forEach(item => {
+            if (!courseSchedules[item.course_name]) {
+                courseSchedules[item.course_name] = {
+                    name: item.course_name,
+                    duration: item.duration,
+                    months: {}
+                };
+            }
+            courseSchedules[item.course_name].months[item.month] = item.date_range;
+        });
+
+        // Show course counts
+        const courseCounter = document.getElementById('courseCounter');
+        courseCounter.innerHTML = `
+            <strong>Course Summary:</strong><br>
+            Total unique courses loaded: ${Object.keys(courseSchedules).length}<br>
+            Total scheduled sessions: ${schedule.length}
+        `;
+        courseCounter.style.display = 'block';
+
+        // Create a row for each course
+        Object.values(courseSchedules).forEach(course => {
+            const row = document.createElement('tr');
+            
+            // Course name cell (fixed)
+            const nameCell = document.createElement('td');
+            nameCell.className = 'course-name-cell';
+            nameCell.textContent = course.name;
+            row.appendChild(nameCell);
+
+            // Duration cell (fixed)
+            const daysCell = document.createElement('td');
+            daysCell.className = 'days-cell';
+            daysCell.textContent = course.duration;
+            row.appendChild(daysCell);
+
+            // Add cells for each month
+            for (let month = 1; month <= 12; month++) {
+                const cell = document.createElement('td');
+                cell.className = 'text-center';
+                cell.textContent = course.months[month] || '';
+                row.appendChild(cell);
+            }
+
+            tableBody.appendChild(row);
+        });
+
+        document.getElementById('scheduleResult').style.display = 'block';
+
+        // Set up scroll syncing after table is displayed
+        const topScroll = document.querySelector('.top-scroll');
+        const tableWrapper = document.querySelector('.table-wrapper');
+        const tableWidth = document.querySelector('.table').offsetWidth;
+        document.querySelector('.top-scroll-inner').style.width = tableWidth + 'px';
+
+        // Sync scroll positions
+        topScroll.addEventListener('scroll', function() {
+            tableWrapper.scrollLeft = topScroll.scrollLeft;
+        });
+
+        tableWrapper.addEventListener('scroll', function() {
+            topScroll.scrollLeft = tableWrapper.scrollLeft;
+        });
+    }
+
+    document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData();
+        const fileInput = document.getElementById('inputFile');
+        const yearInput = document.getElementById('year');
+        
+        // Get selected months
+        const selectedMonths = Array.from(document.querySelectorAll('.month-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+        
+        if (selectedMonths.length === 0) {
+            alert('Please select at least one month');
+            return;
+        }
+
+        if (!fileInput.files[0]) {
+            alert('Please select a file');
+            return;
+        }
+
+        formData.append('input_file', fileInput.files[0]);
+        formData.append('year', yearInput.value);
+        formData.append('holidays', holidays.join(','));
+        formData.append('months', selectedMonths.join(','));
+        formData.append('randomness', document.getElementById('randomness').value);
+
+        // Show loading spinner
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('errorAlert').style.display = 'none';
+
+        try {
+            const response = await fetch('/generate_schedule', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                generatedSchedule = data.schedule;
+                displaySchedule(data.schedule);
+                document.getElementById('exportBtn').style.display = 'inline-block';
+                document.getElementById('exportXMLBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('errorAlert').textContent = data.error;
+                document.getElementById('errorAlert').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('errorAlert').textContent = 'Error generating schedule: ' + error.message;
+            document.getElementById('errorAlert').style.display = 'block';
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    });
+    </script>
+</body>
+</html>

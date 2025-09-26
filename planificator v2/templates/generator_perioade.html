@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}<title>Generator</title>{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h1 class="h4 mb-0">Generator perioade cursuri</h1>
+            </div>
+<div class="card-body">
+    <form id="scheduleForm" class="mb-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="inputFile" class="form-label">Input File (CSV or Excel)</label>
+                    <input type="file" class="form-control" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="year" class="form-label">Year</label>
+                    <input type="number" class="form-control" id="year" min="2024" max="2030" value="2024" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="mb-3">
+                <label class="form-label">Select Months</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="1" id="month1">
+                        <label class="form-check-label" for="month1">January</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="2" id="month2">
+                        <label class="form-check-label" for="month2">February</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="3" id="month3">
+                        <label class="form-check-label" for="month3">March</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="4" id="month4">
+                        <label class="form-check-label" for="month4">April</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="5" id="month5">
+                        <label class="form-check-label" for="month5">May</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="6" id="month6">
+                        <label class="form-check-label" for="month6">June</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="7" id="month7">
+                        <label class="form-check-label" for="month7">July</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="8" id="month8">
+                        <label class="form-check-label" for="month8">August</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="9" id="month9">
+                        <label class="form-check-label" for="month9">September</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="10" id="month10">
+                        <label class="form-check-label" for="month10">October</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="11" id="month11">
+                        <label class="form-check-label" for="month11">November</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input month-checkbox" type="checkbox" value="12" id="month12">
+                        <label class="form-check-label" for="month12">December</label>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllMonths()">Select All</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="deselectAllMonths()">Deselect All</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="randomness" class="form-label">Randomness Level (1-10)</label>
+                <div class="d-flex align-items-center">
+                    <input type="range" class="form-range flex-grow-1" id="randomness" min="1" max="10" value="5">
+                    <span class="ms-2" id="randomnessValue">5</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Romanian Holidays (Optional)</label>
+            <div class="holiday-container">
+                <div id="holidayList"></div>
+                <div class="input-group mb-3">
+                    <textarea class="form-control" id="holidayInput" placeholder="Enter dates (DD.MM.YYYY) separated by commas or new lines" rows="1"></textarea>
+                    <button type="button" class="btn btn-primary" onclick="addHolidays()">Add Holidays</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col">
+                <button type="submit" class="btn btn-primary">Generate Schedule</button>
+                <button type="button" class="btn btn-success ms-2" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Loading spinner -->
+    <div id="loadingSpinner" style="display: none;" class="text-center my-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Generating schedule...</p>
+    </div>
+
+    <!-- Error alert -->
+    <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;" role="alert"></div>
+
+    <div id="courseCounter" class="alert alert-info mt-3" style="display: none;" role="alert"></div>
+
+    <!-- Schedule Results -->
+    <div id="scheduleResult" style="display: none;">
+        <h2>Generated Schedule</h2>
+        <div class="table-container">
+            <!-- Actual scrollbar that will be at the top -->
+            <div class="table-scroll">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Course Name</th>
+                            <th>Days</th>
+                            <th>January</th>
+                            <th>February</th>
+                            <th>March</th>
+                            <th>April</th>
+                            <th>May</th>
+                            <th>June</th>
+                            <th>July</th>
+                            <th>August</th>
+                            <th>September</th>
+                            <th>October</th>
+                            <th>November</th>
+                            <th>December</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <!-- Schedule rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

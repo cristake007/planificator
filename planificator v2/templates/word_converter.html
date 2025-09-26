@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}<title>Word converter</title>{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="h4 mb-0">Word to Excel Course Converter</h1>
+                </div>
+                <div class="card-body">
+                    <form id="convertWordForm" method="POST" enctype="multipart/form-data" action="/convert_word">
+                        <div class="mb-3">
+                            <label for="wordFile" class="form-label">Word File (Courses List)</label>
+                            <input type="file" class="form-control" id="wordFile" name="word_file" accept=".docx" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="permalinksFile" class="form-label">Excel File (Permalinks)</label>
+                            <input type="file" class="form-control" id="permalinksFile" name="permalinks_file" accept=".xlsx,.xls,.csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Convert and Match</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="alert alert-success mt-3 success-message" id="successMessage" role="alert" style="display: none;">
+                <i class="bi bi-check-circle me-2"></i> Excel file has been generated successfully!
+            </div>
+
+            <!-- Error Message -->
+            <div class="alert alert-danger mt-3" id="errorAlert" style="display: none;" role="alert"></div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="spinner-overlay" id="loadingSpinner" style="display: none;">
+        <div class="spinner-content">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div>Converting to Excel...</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('wordForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevent page refresh
+            const formData = new FormData();
+            const fileInput = document.getElementById('inputFile').files[0];
+            formData.append('input_file', fileInput);
+
+            document.getElementById('loadingSpinner').style.display = 'block';
+
+            try {
+                const response = await fetch('/convert_word', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'An unknown error occurred');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'courses.xlsx';
+                a.click();
+                window.URL.revokeObjectURL(url); // Clean up URL
+
+                document.getElementById('successMessage').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('successMessage').style.display = 'none';
+                }, 5000);
+            } catch (error) {
+                document.getElementById('errorAlert').textContent = error.message;
+                document.getElementById('errorAlert').style.display = 'block';
+            } finally {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        });
+    </script>
+{% endblock %}

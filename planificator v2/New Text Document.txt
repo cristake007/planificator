@@ -1,0 +1,27 @@
+# 1. Create the virtual environment
+python3 -m venv venv
+
+# 2. Activate it
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 4. Point Flask at your app entrypoint (adjust if yours is named differently)
+export FLASK_APP=app.py
+# (on PowerShell: $env:FLASK_APP = "app.py")
+
+# 5. Run the dev server on 0.0.0.0
+flask run --host=0.0.0.0 --port=5000
+Windows (cmd.exe) version:
+
+batch
+Copy
+Edit
+python -m venv venv
+venv\Scripts\activate
+pip install --upgrade pip
+pip install -r requirements.txt
+set FLASK_APP=app.py
+flask run --host=0.0.0.0 --port=5000

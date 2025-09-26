@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-bs-theme="auto">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% block title %}{% endblock %}
+
+    <!-- Bootstrap and custom styles -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/styles.css" rel="stylesheet">
+</head>
+
+<body>
+<header class="navbar sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 text-white" href="#">Company Name</a>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="nav flex-column">
+                <a class="nav-link {% if request.endpoint == 'scheduler.generator_perioade' %}active{% endif %}" href="{{ url_for('scheduler.generator_perioade') }}">
+                    <i class="bi bi-calendar3"></i> Schedule Generator
+                </a>
+                <a class="nav-link {% if request.endpoint == 'scheduler.xml_formatter' %}active{% endif %}" href="{{ url_for('scheduler.xml_formatter') }}">
+                    <i class="bi bi-file-earmark-code"></i> XML Formatter
+                </a>
+                <a class="nav-link {% if request.endpoint == 'scheduler.word_to_excel' %}active{% endif %}" href="{{ url_for('scheduler.word_to_excel') }}">
+                    <i class="bi bi-file-earmark-code"></i> Word to Excel
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 main-content">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            </div>
+            <div class="container">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    
+        <!-- Bootstrap JS -->
+        <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+        <script>feather.replace()</script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+        {% block scripts %}{% endblock %}
+</body>
+</html>
