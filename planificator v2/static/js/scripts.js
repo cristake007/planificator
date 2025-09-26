@@ -198,19 +198,55 @@ document.getElementById('scheduleForm').addEventListener('submit', async (e) => 
             body: formData
         });
 
-        const data = await response.json();
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('Failed to parse response JSON:', parseError);
+        }
 
-        if (data.success) {
+        const errorAlert = document.getElementById('errorAlert');
+        const exportBtn = document.getElementById('exportBtn');
+
+        if (response.ok && data && data.success) {
             generatedSchedule = data.schedule;
             displaySchedule(data.schedule);
-            document.getElementById('exportBtn').style.display = 'inline-block';
+            exportBtn.style.display = 'inline-block';
+            errorAlert.style.display = 'none';
         } else {
-            document.getElementById('errorAlert').textContent = data.error;
-            document.getElementById('errorAlert').style.display = 'block';
+            generatedSchedule = null;
+            exportBtn.style.display = 'none';
+
+            let message = (data && (data.error || data.message)) || 'Failed to generate schedule.';
+
+            if (data && data.unscheduled_courses) {
+                const monthNames = [
+                    '', 'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                ];
+
+                const details = Object.entries(data.unscheduled_courses)
+                    .map(([month, courses]) => {
+                        const monthIndex = parseInt(month, 10);
+                        const monthLabel = Number.isNaN(monthIndex) ? month : monthNames[monthIndex] || month;
+                        return `${monthLabel}: ${courses.join(', ')}`;
+                    })
+                    .join('\n');
+
+                if (details && !message.includes(details)) {
+                    message += `\n${details}`;
+                }
+            }
+
+            errorAlert.innerHTML = message.replace(/\n/g, '<br>');
+            errorAlert.style.display = 'block';
         }
     } catch (error) {
-        document.getElementById('errorAlert').textContent = 'Error generating schedule: ' + error.message;
-        document.getElementById('errorAlert').style.display = 'block';
+        generatedSchedule = null;
+        document.getElementById('exportBtn').style.display = 'none';
+        const errorAlert = document.getElementById('errorAlert');
+        errorAlert.textContent = 'Error generating schedule: ' + error.message;
+        errorAlert.style.display = 'block';
     } finally {
         document.getElementById('loadingSpinner').style.display = 'none';
     }
