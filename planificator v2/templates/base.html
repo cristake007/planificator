@@ -25,7 +25,7 @@
                     <i class="bi bi-calendar3"></i> Schedule Generator
                 </a>
                 <a class="nav-link {% if request.endpoint == 'scheduler.xml_formatter' %}active{% endif %}" href="{{ url_for('scheduler.xml_formatter') }}">
-                    <i class="bi bi-file-earmark-code"></i> XML Formatter
+                    <i class="bi bi-file-earmark-code"></i> Convertor excel to xml
                 </a>
                 <a class="nav-link {% if request.endpoint == 'scheduler.word_to_excel' %}active{% endif %}" href="{{ url_for('scheduler.word_to_excel') }}">
                     <i class="bi bi-file-earmark-code"></i> Word to Excel
