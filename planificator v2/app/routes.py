@@ -5,6 +5,7 @@ import os
 import io
 import calendar
 from datetime import datetime, timedelta
+import re
 from typing import List, Dict, Any
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -20,6 +21,35 @@ from typing import List, Dict
 def create_xml_export(schedule: List[Dict[str, Any]], year: int) -> str:
     """Create XML file from schedule data with course-specific period numbering."""
     try:
+        def parse_date_range(date_range: str) -> tuple[str, str]:
+            """Parse date ranges like 05.02.2026 or 05-06.02.2026 into ISO start/end dates."""
+            normalized = (date_range or "").strip()
+
+            # Single day format: dd.mm.yyyy
+            single_day = re.match(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$', normalized)
+            if single_day:
+                day, month, parsed_year = single_day.groups()
+                iso_date = f"{parsed_year}-{month.zfill(2)}-{day.zfill(2)}"
+                return iso_date, iso_date
+
+            # Multi-day same month format: dd-dd.mm.yyyy
+            multi_day_same_month = re.match(r'^(\d{1,2})\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})$', normalized)
+            if multi_day_same_month:
+                start_day, end_day, month, parsed_year = multi_day_same_month.groups()
+                start_iso = f"{parsed_year}-{month.zfill(2)}-{start_day.zfill(2)}"
+                end_iso = f"{parsed_year}-{month.zfill(2)}-{end_day.zfill(2)}"
+                return start_iso, end_iso
+
+            # Multi-day explicit month format: dd.mm-dd.mm.yyyy
+            multi_day_with_month = re.match(r'^(\d{1,2})\.(\d{1,2})\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})$', normalized)
+            if multi_day_with_month:
+                start_day, start_month, end_day, end_month, parsed_year = multi_day_with_month.groups()
+                start_iso = f"{parsed_year}-{start_month.zfill(2)}-{start_day.zfill(2)}"
+                end_iso = f"{parsed_year}-{end_month.zfill(2)}-{end_day.zfill(2)}"
+                return start_iso, end_iso
+
+            raise ValueError(f"Unsupported date format: {date_range}")
+
         root = ET.Element("events")
         
         # Group events by course name to track period numbers
@@ -39,44 +69,13 @@ def create_xml_export(schedule: List[Dict[str, Any]], year: int) -> str:
                 try:
                     event_id += 1  # Increment ID for each event
                     date_str = event['date_range'].strip()
-                    
-                    if '-' in date_str:
-                        # Multi-day event
-                        start_day, end_full = date_str.split('-')
-                        start_day = start_day.strip()
-                        
-                        # Parse end date to get both day and month
-                        if '.' not in end_full:
-                            print(f"Invalid end date format: {end_full}")
-                            continue
-                            
-                        end_parts = end_full.strip().split('.')
-                        if len(end_parts) < 3:
-                            print(f"Incomplete end date: {end_full}")
-                            continue
-                            
-                        end_day = end_parts[0]
-                        end_month = end_parts[1]
-                        end_year = end_parts[2]
-                        
-                        # For multi-day events, both start and end must use same month and year
-                        start_date = f"{end_year}-{end_month.zfill(2)}-{start_day.zfill(2)}"
-                        end_date = f"{end_year}-{end_month.zfill(2)}-{end_day.zfill(2)}"
-                        
-                        # Debug info
-                        print(f"Parsed multi-day event: {date_str} -> Start: {start_date}, End: {end_date}")
-                    else:
-                        # Single day event
-                        date_parts = date_str.split('.')
-                        if len(date_parts) < 3:
-                            print(f"Invalid date format: {date_str}")
-                            continue
-                            
-                        day = date_parts[0]
-                        month = date_parts[1]
-                        year_str = date_parts[2]
-                        
-                        start_date = end_date = f"{year_str}-{month.zfill(2)}-{day.zfill(2)}"
+                    start_date, end_date = parse_date_range(date_str)
+
+                    # MEC-compatible datetime meta values
+                    start_day_seconds = 8 * 3600
+                    end_day_seconds = 18 * 3600
+                    start_datetime = f"{start_date} 08:00 AM"
+                    end_datetime = f"{end_date} 06:00 PM"
 
                     # Create XML item
                     item = ET.SubElement(root, "item")
@@ -104,25 +103,55 @@ def create_xml_export(schedule: List[Dict[str, Any]], year: int) -> str:
                     ET.SubElement(meta, "mec_organizer_id").text = "1"
                     ET.SubElement(meta, "mec_allday").text = "1"  # Set as all-day event
                     ET.SubElement(meta, "mec_start_date").text = start_date
+                    ET.SubElement(meta, "mec_start_time_hour").text = "8"
+                    ET.SubElement(meta, "mec_start_time_minutes").text = "00"
+                    ET.SubElement(meta, "mec_start_time_ampm").text = "AM"
+                    ET.SubElement(meta, "mec_start_day_seconds").text = str(start_day_seconds)
+                    ET.SubElement(meta, "mec_start_datetime").text = start_datetime
                     ET.SubElement(meta, "mec_end_date").text = end_date
+                    ET.SubElement(meta, "mec_end_time_hour").text = "6"
+                    ET.SubElement(meta, "mec_end_time_minutes").text = "00"
+                    ET.SubElement(meta, "mec_end_time_ampm").text = "PM"
+                    ET.SubElement(meta, "mec_end_day_seconds").text = str(end_day_seconds)
+                    ET.SubElement(meta, "mec_end_datetime").text = end_datetime
+                    ET.SubElement(meta, "mec_repeat_status").text = "0"
+                    ET.SubElement(meta, "event_past").text = "1"
 
                     # mec_date with correct structure
                     mec_date = ET.SubElement(meta, "mec_date")
                     
                     start = ET.SubElement(mec_date, "start")
                     ET.SubElement(start, "date").text = start_date
-                    ET.SubElement(start, "hour").text = "0"
+                    ET.SubElement(start, "hour").text = "8"
                     ET.SubElement(start, "minutes").text = "00"
                     ET.SubElement(start, "ampm").text = "AM"
 
                     end = ET.SubElement(mec_date, "end")
                     ET.SubElement(end, "date").text = end_date
-                    ET.SubElement(end, "hour").text = "23"
-                    ET.SubElement(end, "minutes").text = "59"
+                    ET.SubElement(end, "hour").text = "6"
+                    ET.SubElement(end, "minutes").text = "00"
                     ET.SubElement(end, "ampm").text = "PM"
 
                     # Set all-day inside mec_date
                     ET.SubElement(mec_date, "allday").text = "1"
+
+                    # Explicit MEC/time blocks used by shortcode rendering in some imports.
+                    mec_block = ET.SubElement(item, "mec")
+                    ET.SubElement(mec_block, "id").text = ""
+                    ET.SubElement(mec_block, "post_id").text = str(event_id)
+                    ET.SubElement(mec_block, "start").text = start_date
+                    ET.SubElement(mec_block, "end").text = end_date
+                    ET.SubElement(mec_block, "repeat").text = "0"
+                    ET.SubElement(mec_block, "time_start").text = str(start_day_seconds)
+                    ET.SubElement(mec_block, "time_end").text = str(end_day_seconds)
+
+                    time = ET.SubElement(item, "time")
+                    ET.SubElement(time, "start").text = "All Day"
+                    ET.SubElement(time, "end").text = ""
+                    ET.SubElement(time, "start_raw").text = "8:00 am"
+                    ET.SubElement(time, "end_raw").text = "6:00 pm"
+                    ET.SubElement(time, "start_timestamp").text = str(int(datetime.strptime(start_date, "%Y-%m-%d").timestamp()) + start_day_seconds)
+                    ET.SubElement(time, "end_timestamp").text = str(int(datetime.strptime(end_date, "%Y-%m-%d").timestamp()) + end_day_seconds)
 
                 except Exception as e:
                     print(f"Error processing event for {course_name}, period {period_idx}: {str(e)}")
@@ -459,4 +488,3 @@ def convert_to_excel(df: pd.DataFrame) -> bytes:
         df.to_excel(writer, index=False, sheet_name='Courses')
     output.seek(0)
     return output.getvalue()
-
