@@ -115,7 +115,6 @@ def create_xml_export(schedule: List[Dict[str, Any]], year: int) -> str:
                     ET.SubElement(meta, "mec_end_day_seconds").text = str(end_day_seconds)
                     ET.SubElement(meta, "mec_end_datetime").text = end_datetime
                     ET.SubElement(meta, "mec_repeat_status").text = "0"
-                    ET.SubElement(meta, "event_past").text = "1"
 
                     # mec_date with correct structure
                     mec_date = ET.SubElement(meta, "mec_date")
