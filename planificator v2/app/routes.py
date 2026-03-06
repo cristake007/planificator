@@ -334,7 +334,7 @@ def xml_formatter():
 
 @scheduler_bp.route('/format-xml', methods=['POST'])
 def format_xml():
-    """Generate XML from Excel input with improved date parsing."""
+    """Generate XML from CSV/Excel input with improved date parsing."""
     try:
         print("format-xml endpoint hit")
         file = request.files.get('input_file')
@@ -345,13 +345,25 @@ def format_xml():
         print(f"File received: {file.filename}")
         year = datetime.now().year
 
-        # Read Excel file
+        file_extension = os.path.splitext(file.filename or '')[1].lower()
+        supported_extensions = {'.xlsx', '.xls', '.csv'}
+        if file_extension not in supported_extensions:
+            return jsonify({
+                'error': 'Unsupported file format. Please upload .xlsx, .xls, or .csv.'
+            }), 400
+
+        file_bytes = io.BytesIO(file.read())
+
+        # Read input file
         try:
-            df = pd.read_excel(io.BytesIO(file.read()), dtype=str)
-            print("Excel columns:", df.columns.tolist())
-        except Exception as excel_error:
-            print(f"Excel reading error: {str(excel_error)}")
-            return jsonify({'error': f'Error reading Excel file: {str(excel_error)}'}), 400
+            if file_extension == '.csv':
+                df = pd.read_csv(file_bytes, dtype=str, encoding='utf-8-sig', sep=None, engine='python')
+            else:
+                df = pd.read_excel(file_bytes, dtype=str)
+            print("Input columns:", df.columns.tolist())
+        except Exception as input_error:
+            print(f"Input reading error: {str(input_error)}")
+            return jsonify({'error': f'Error reading input file: {str(input_error)}'}), 400
 
         normalized_columns = {
             str(col).strip().lower(): col
@@ -445,7 +457,7 @@ def format_xml():
                 continue
 
         if not schedule:
-            return jsonify({'error': 'No valid course data found in Excel file'}), 400
+            return jsonify({'error': 'No valid course data found in the input file'}), 400
 
         print(f"Successfully created {len(schedule)} events")
         
