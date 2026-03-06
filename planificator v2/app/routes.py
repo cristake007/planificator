@@ -353,16 +353,66 @@ def format_xml():
             print(f"Excel reading error: {str(excel_error)}")
             return jsonify({'error': f'Error reading Excel file: {str(excel_error)}'}), 400
 
-        # Verify required columns
-        required_columns = ['Title', 'Permalink']
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        normalized_columns = {
+            str(col).strip().lower(): col
+            for col in df.columns
+        }
+
+        # Support both direct exports from the generator and legacy files.
+        required_columns = {
+            'title': 'Title',
+            'permalink': 'Permalink',
+        }
+        missing_columns = [
+            canonical_name
+            for source_name, canonical_name in required_columns.items()
+            if source_name not in normalized_columns
+        ]
         if missing_columns:
             return jsonify({'error': f'Missing required columns: {", ".join(missing_columns)}'}), 400
 
-        # Get month columns (Luna 1, Luna 2, etc.)
-        month_columns = [col for col in df.columns if str(col).startswith('Luna')]
+        rename_map = {
+            normalized_columns[source_name]: canonical_name
+            for source_name, canonical_name in required_columns.items()
+        }
+        df = df.rename(columns=rename_map)
+
+        month_aliases = {
+            'january': 'January',
+            'february': 'February',
+            'march': 'March',
+            'april': 'April',
+            'may': 'May',
+            'june': 'June',
+            'july': 'July',
+            'august': 'August',
+            'september': 'September',
+            'october': 'October',
+            'november': 'November',
+            'december': 'December',
+            'luna 1': 'Luna 1',
+            'luna 2': 'Luna 2',
+            'luna 3': 'Luna 3',
+            'luna 4': 'Luna 4',
+            'luna 5': 'Luna 5',
+            'luna 6': 'Luna 6',
+            'luna 7': 'Luna 7',
+            'luna 8': 'Luna 8',
+            'luna 9': 'Luna 9',
+            'luna 10': 'Luna 10',
+            'luna 11': 'Luna 11',
+            'luna 12': 'Luna 12',
+        }
+
+        month_columns = [
+            original_name
+            for normalized_name, original_name in normalized_columns.items()
+            if normalized_name in month_aliases
+        ]
         if not month_columns:
-            return jsonify({'error': 'No month columns found (should start with "Luna")'}), 400
+            return jsonify({
+                'error': 'No supported date columns found. Use month columns (January-December) or Luna columns (Luna 1-Luna 12).'
+            }), 400
 
         print(f"Found month columns: {month_columns}")
         
