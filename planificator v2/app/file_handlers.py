@@ -15,18 +15,68 @@ def read_input_file(file_data: bytes, file_extension: str) -> pd.DataFrame:
     """Read and parse input file (CSV or Excel) while preserving original order."""
     try:
         if file_extension.lower() == '.csv':
-            df = pd.read_csv(io.BytesIO(file_data), encoding='utf-8')
+            # sep=None enables delimiter sniffing (comma, semicolon, tab, etc.)
+            df = pd.read_csv(io.BytesIO(file_data), encoding='utf-8-sig', sep=None, engine='python')
         else:  # Excel
             df = pd.read_excel(io.BytesIO(file_data))
+
+        # Normalize incoming column names for flexible matching
+        normalized_columns = {
+            str(col).strip().lower(): col
+            for col in df.columns
+        }
+
+        required_columns = {
+            'title': 'Title',
+            'durata curs': 'Durata Curs',
+            'permalink': 'Permalink',
+        }
+
+        missing_required = [
+            canonical_name for source_name, canonical_name in required_columns.items()
+            if source_name not in normalized_columns
+        ]
+        if missing_required:
+            raise ValueError(
+                'Missing required columns: ' + ', '.join(missing_required)
+            )
+
+        rename_map = {
+            normalized_columns[source_name]: canonical_name
+            for source_name, canonical_name in required_columns.items()
+        }
+
+        # Optional column from user template
+        if 'investitie' in normalized_columns:
+            rename_map[normalized_columns['investitie']] = 'investitie'
+
+        df = df.rename(columns=rename_map)
 
         # Add original order index
         df['original_order'] = range(len(df))
 
-        # Clean up the dataframe while preserving order
-        df = df[['Title', 'Permalink', 'Durata Curs', 'original_order']].dropna(subset=['Title', 'Durata Curs'])
-        
+        # Keep needed columns while preserving order and optional investment column
+        selected_columns = ['Title', 'Permalink', 'Durata Curs', 'original_order']
+        if 'investitie' in df.columns:
+            selected_columns.insert(3, 'investitie')
+
+        df = df[selected_columns].dropna(subset=['Title', 'Durata Curs'])
+
         # Extract numeric duration
-        df['duration'] = df['Durata Curs'].str.extract('(\d+)').astype(int)
+        df['duration'] = (
+            df['Durata Curs']
+            .astype(str)
+            .str.extract('(\d+)')[0]
+        )
+
+        if df['duration'].isna().any():
+            invalid_rows = (df[df['duration'].isna()].index + 1).tolist()
+            raise ValueError(
+                'Invalid values in "Durata Curs". Expected text containing a number (e.g., "2 zile"). '
+                f'Problematic row numbers: {invalid_rows}'
+            )
+
+        df['duration'] = df['duration'].astype(int)
 
         return df
     except Exception as e:
