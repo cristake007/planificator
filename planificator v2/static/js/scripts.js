@@ -109,6 +109,7 @@ function displaySchedule(schedule) {
             courseSchedules.set(item.Title, {
                 name: item.Title,
                 duration: item['Durata Curs'],
+                investitie: item.investitie || item.Investitie || '',
                 months: {},
                 originalOrder: item.original_order
             });
@@ -145,6 +146,12 @@ function displaySchedule(schedule) {
             daysCell.className = 'days-cell';
             daysCell.textContent = course.duration;
             row.appendChild(daysCell);
+
+            // Investitie cell
+            const investitieCell = document.createElement('td');
+            investitieCell.className = 'text-center';
+            investitieCell.textContent = course.investitie || '';
+            row.appendChild(investitieCell);
 
             // Add cells for each month
             for (let month = 1; month <= 12; month++) {
