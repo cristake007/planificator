@@ -37,16 +37,18 @@ class CourseScheduler:
 
         current_date = start_date
         business_days = 0
+        allow_cross_period = duration > 5
         week_start = start_date - timedelta(days=start_date.weekday())
 
         while business_days < duration:
-            # Don't span weeks
-            if current_date - week_start >= timedelta(days=5):
-                return False
+            if not allow_cross_period:
+                # Courses lasting 5 days or fewer must stay in the same work week.
+                if current_date - week_start >= timedelta(days=5):
+                    return False
 
-            # Don't span months
-            if current_date.month != start_date.month:
-                return False
+                # Courses lasting 5 days or fewer must stay in the same month.
+                if current_date.month != start_date.month:
+                    return False
 
             if self.is_business_day(current_date):
                 business_days += 1
