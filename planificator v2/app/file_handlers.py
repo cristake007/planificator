@@ -102,6 +102,7 @@ def create_excel_export(schedule: List[Dict[str, Any]], year: int, holidays: Lis
                     'Title': title,
                     'Permalink': item['Permalink'],
                     'Durata Curs': item['Durata Curs'],
+                    'investitie': item.get('investitie') or item.get('Investitie') or '',
                     'January': '',
                     'February': '',
                     'March': '',
