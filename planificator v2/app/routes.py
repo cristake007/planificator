@@ -240,7 +240,11 @@ def generate_schedule():
                     dates_to_use = filtered_dates if filtered_dates else available_dates
 
                     if dates_to_use:
-                        if randomness_level > 7:
+                        # For long courses, prefer the earliest valid start date in the month
+                        # so the full range is more likely to stay within the same month.
+                        if duration > 5:
+                            start_date = min(dates_to_use)
+                        elif randomness_level > 7:
                             start_date = random.choice(dates_to_use)
                         else:
                             # Calculate weights based on position and randomness
