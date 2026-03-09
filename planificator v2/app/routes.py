@@ -271,6 +271,7 @@ def generate_schedule():
                             'Title': row['Title'],
                             'Permalink': row['Permalink'],
                             'Durata Curs': row['Durata Curs'],
+                            'investitie': row.get('investitie', ''),
                             'date_range': scheduler.format_date_range(start_date, duration),
                             'month': month,
                             'original_order': int(row['original_order']),
