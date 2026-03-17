@@ -9,7 +9,8 @@ import re
 from typing import List, Dict, Any
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from app.file_handlers import convert_word_to_excel, process_word_file, read_input_file, create_excel_export
+from docx import Document
+from app.file_handlers import read_input_file, create_excel_export
 from rapidfuzz import process, fuzz
 from app.scheduler import CourseScheduler
 scheduler_bp = Blueprint('scheduler', __name__)
@@ -481,11 +482,86 @@ def format_xml():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 400
 
-from rapidfuzz import process, fuzz
+MONTH_COLUMN_ORDER = [
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december'
+]
+
+
+def _normalize_title(value: str) -> str:
+    normalized = str(value or '').strip().lower()
+    normalized = re.sub(r'[^\w\s]', ' ', normalized)
+    return re.sub(r'\s+', ' ', normalized).strip()
+
+
+def _build_word_course_rows(document: Document) -> list[dict[str, Any]]:
+    """Collect editable Word table rows representing real courses."""
+    rows = []
+    for table in document.tables:
+        for row in table.rows:
+            cells = row.cells
+            if len(cells) < 6:
+                continue
+
+            first_cell = cells[0]
+            if first_cell._tc in {cell._tc for cell in cells[1:]}:
+                continue
+
+            course_title = first_cell.text.strip()
+            if not course_title:
+                continue
+
+            non_empty_cells = sum(1 for cell in cells if cell.text.strip())
+            if non_empty_cells <= 1:
+                continue
+
+            rows.append({'row': row, 'title': course_title, 'normalized_title': _normalize_title(course_title)})
+    return rows
+
+
+def _resolve_month_columns(df: pd.DataFrame) -> list[str]:
+    normalized_columns = {str(column).strip().lower(): column for column in df.columns}
+    return [normalized_columns[month] for month in MONTH_COLUMN_ORDER if month in normalized_columns]
+
+
+def _first_three_dates(row: pd.Series, month_columns: list[str]) -> list[str]:
+    dates: list[str] = []
+    for column in month_columns:
+        value = row.get(column)
+        if pd.notna(value) and str(value).strip() and str(value).strip().lower() != 'nan':
+            dates.append(str(value).strip())
+        if len(dates) == 3:
+            break
+
+    while len(dates) < 3:
+        dates.append('')
+    return dates
+
+
+def _best_schedule_match(word_title: str, schedule_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    word_normalized = _normalize_title(word_title)
+    if not word_normalized or not schedule_rows:
+        return None
+
+    titles = [entry['normalized_title'] for entry in schedule_rows]
+    fuzzy_result = process.extractOne(word_normalized, titles, scorer=fuzz.token_set_ratio)
+    if not fuzzy_result:
+        return None
+
+    matched_title, fuzzy_score, index = fuzzy_result
+    word_tokens = set(word_normalized.split())
+    matched_tokens = set(matched_title.split())
+    token_overlap = (len(word_tokens & matched_tokens) / len(matched_tokens) * 100) if matched_tokens else 0
+    combined_score = (0.7 * fuzzy_score) + (0.3 * token_overlap)
+
+    if combined_score < 70:
+        return None
+    return schedule_rows[index]
+
 
 @scheduler_bp.route('/convert_word', methods=['POST'])
 def convert_word():
-    """Match Excel/CSV courses with Word document date ranges."""
+    """Match Word rows to canonical schedule rows and return a modified .docx file."""
     try:
         word_file = request.files.get('word_file')
         permalinks_file = request.files.get('permalinks_file')
@@ -493,64 +569,63 @@ def convert_word():
         if not word_file or not word_file.filename.endswith('.docx'):
             return jsonify({'error': 'Invalid Word file. Please upload a .docx file'}), 400
 
-        # Updated file extension check to include CSV
         if not permalinks_file or not permalinks_file.filename.lower().endswith(('.xlsx', '.xls', '.csv')):
             return jsonify({'error': 'Invalid file format. Please upload an .xlsx, .xls, or .csv file'}), 400
 
-        # First read the Excel/CSV file as our base
         file_extension = permalinks_file.filename.lower().split('.')[-1]
         if file_extension == 'csv':
-            base_df = pd.read_csv(permalinks_file)
+            schedule_df = pd.read_csv(permalinks_file, dtype=str)
         else:
-            base_df = pd.read_excel(permalinks_file)
+            schedule_df = pd.read_excel(permalinks_file, dtype=str)
 
-        # Validate base file structure
-        if 'Title' not in base_df.columns or 'Permalink' not in base_df.columns:
-            return jsonify({'error': 'Input file must contain "Title" and "Permalink" columns'}), 400
+        title_column = next((column for column in schedule_df.columns if str(column).strip().lower() == 'title'), None)
+        if not title_column:
+            return jsonify({'error': 'Input file must contain a "Title" column'}), 400
 
-        # Get date ranges from Word file
-        word_dates = process_word_file(word_file.read())
+        month_columns = _resolve_month_columns(schedule_df)
+        if not month_columns:
+            return jsonify({'error': 'Input file must contain month columns (January-December)'}), 400
 
-        # Add Luna columns to base DataFrame
-        base_df['Luna 1'] = ''
-        base_df['Luna 2'] = ''
-        base_df['Luna 3'] = ''
+        schedule_rows = []
+        for _, schedule_row in schedule_df.iterrows():
+            title = str(schedule_row.get(title_column, '')).strip()
+            if not title:
+                continue
 
-        # Match and fill in Luna values using fuzzy matching
-        for excel_idx, excel_row in base_df.iterrows():
-            excel_title = excel_row['Title']
-            best_match = process.extractOne(
-                excel_title,
-                list(word_dates.keys()),
-                scorer=fuzz.ratio,
-                score_cutoff=95
-            )
-            
-            if best_match:
-                word_title = best_match[0]
-                luna_values = word_dates[word_title]
-                for luna_col in ['Luna 1', 'Luna 2', 'Luna 3']:
-                    base_df.at[excel_idx, luna_col] = luna_values[luna_col]
+            schedule_rows.append({
+                'title': title,
+                'normalized_title': _normalize_title(title),
+                'dates': _first_three_dates(schedule_row, month_columns)
+            })
 
-        # Convert to Excel
-        output_excel = convert_to_excel(base_df)
+        if not schedule_rows:
+            return jsonify({'error': 'No valid course rows found in the schedule file'}), 400
+
+        document = Document(io.BytesIO(word_file.read()))
+        word_rows = _build_word_course_rows(document)
+
+        for word_row in word_rows:
+            matched = _best_schedule_match(word_row['title'], schedule_rows)
+            if not matched:
+                continue
+
+            cells = word_row['row'].cells
+            for target_index, date_value in zip((3, 4, 5), matched['dates']):
+                if target_index < len(cells):
+                    cells[target_index].text = date_value
+
+        output_docx = io.BytesIO()
+        document.save(output_docx)
+        output_docx.seek(0)
+
         return send_file(
-            io.BytesIO(output_excel),
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            output_docx,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             as_attachment=True,
-            download_name='matched_courses.xlsx'
+            download_name='matched_courses.docx'
         )
 
     except Exception as e:
         import traceback
-        print(traceback.format_exc())  # For debugging
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 400
-
-
-def convert_to_excel(df: pd.DataFrame) -> bytes:
-    """Helper function to convert DataFrame to Excel format."""
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Courses')
-    output.seek(0)
-    return output.getvalue()
