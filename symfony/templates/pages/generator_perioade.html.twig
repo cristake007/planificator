@@ -79,6 +79,13 @@
             </table>
         </div>
     </div>
+
+    <div id="scheduleResult" class="hidden rounded-2xl pattern-panel p-4 md:p-6 overflow-auto">
+        <table class="table table-zebra bg-base-100/95 rounded-xl">
+            <thead><tr><th>Course Name</th><th>Days</th><th>Investitie</th>{% for m in 1..12 %}<th>{{ date("2026-" ~ "%02d"|format(m) ~ "-01")|date("F") }}</th>{% endfor %}</tr></thead>
+            <tbody id="scheduleTableBody"></tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ asset('js/app.js') }}"></script>{% endblock %}
