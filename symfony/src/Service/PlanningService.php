@@ -320,21 +320,32 @@ class PlanningService
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if ($extension === 'csv') {
-            $raw = file($path, FILE_IGNORE_NEW_LINES);
-            if (!$raw) {
+            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (!$lines) {
                 return [];
             }
 
-            $delimiter = (substr_count($raw[0], ';') > substr_count($raw[0], ',')) ? ';' : ',';
-            $headers = str_getcsv((string) array_shift($raw), $delimiter, '"', '\\');
+            $delimiter = (substr_count($lines[0], ';') > substr_count($lines[0], ',')) ? ';' : ',';
+            $file = new SplFileObject($path, 'r');
+            $headers = $file->fgetcsv($delimiter, '"', '\\');
+            if (!is_array($headers)) {
+                return [];
+            }
+
+            $headers = array_map(fn ($value) => trim((string) $value), $headers);
+            $headerCount = count($headers);
+            if ($headerCount === 0) {
+                return [];
+            }
+
             $rows = [];
-            foreach ($raw as $line) {
-                if (trim($line) === '') {
+            while (!$file->eof()) {
+                $values = $file->fgetcsv($delimiter, '"', '\\');
+                if (!is_array($values) || $values === [null]) {
                     continue;
                 }
 
-                $values = str_getcsv($line, $delimiter, '"', '\\');
-                $normalizedValues = array_slice(array_pad($values, count($headers), ''), 0, count($headers));
+                $normalizedValues = array_slice(array_pad($values, $headerCount, ''), 0, $headerCount);
                 $rows[] = array_combine($headers, $normalizedValues);
             }
 
