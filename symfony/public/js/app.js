@@ -49,7 +49,7 @@ function renderSchedulePage() {
 
     tableBody.innerHTML = pageData.map(course => {
         const monthsCells = Array.from({length: 12}, (_, i) => `<td class="text-sm">${formatCellValue(course.months[i + 1])}</td>`).join('');
-        return `<tr><td class="course-title">${course.name}</td><td>${formatCellValue(course.duration)}</td><td>${formatCellValue(course.investitie)}</td>${monthsCells}</tr>`;
+        return `<tr><td class="whitespace-normal">${course.name}</td><td>${formatCellValue(course.duration)}</td><td>${formatCellValue(course.investitie)}</td>${monthsCells}</tr>`;
     }).join('');
 
     paginationWrap.classList.toggle('hidden', totalPages <= 1);
