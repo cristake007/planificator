@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+{% block title %}Generator perioade{% endblock %}
+{% block content %}
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body gap-4">
+        <h1 class="card-title">Generator perioade cursuri</h1>
+        <form id="scheduleForm" class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-4">
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Input File (CSV or Excel)</legend>
+                    <input class="file-input file-input-bordered w-full" type="file" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">Year</legend>
+                    <input class="input input-bordered w-full" type="number" id="year" value="2026" min="2024" max="2035" required>
+                </fieldset>
+            </div>
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Select Months</legend>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {% for m in 1..12 %}
+                        <label class="label cursor-pointer justify-start gap-2"><input class="checkbox month-checkbox" type="checkbox" value="{{ m }}"><span class="label-text">{{ date("2026-" ~ "%02d"|format(m) ~ "-01")|date("F") }}</span></label>
+                    {% endfor %}
+                </div>
+                <div class="join">
+                    <button class="btn btn-sm join-item" type="button" onclick="selectAllMonths()">Select All</button>
+                    <button class="btn btn-sm join-item" type="button" onclick="deselectAllMonths()">Deselect All</button>
+                </div>
+            </fieldset>
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Randomness</legend>
+                <input id="randomness" type="range" min="1" max="10" value="5" class="range">
+                <span class="badge" id="randomnessValue">5</span>
+            </fieldset>
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Romanian Holidays</legend>
+                <textarea id="holidayInput" class="textarea textarea-bordered" rows="2" placeholder="DD.MM.YYYY, one per line or comma-separated"></textarea>
+                <div class="flex gap-2 items-center">
+                    <button class="btn btn-outline btn-sm" type="button" onclick="addHolidays()">Add Holidays</button>
+                    <div id="holidayList" class="flex gap-2 flex-wrap"></div>
+                </div>
+            </fieldset>
+            <div class="flex gap-2">
+                <button class="btn btn-primary" type="submit">Generate Schedule</button>
+                <button class="btn btn-success hidden" id="exportBtn" type="button" onclick="exportSchedule()">Export to Excel</button>
+            </div>
+        </form>
+
+        <div id="loadingSpinner" class="hidden"><span class="loading loading-spinner loading-md"></span> Generating schedule...</div>
+        <div id="errorAlert" class="alert alert-error hidden"></div>
+        <div id="courseCounter" class="alert alert-info hidden"></div>
+        <div id="scheduleResult" class="hidden overflow-auto">
+            <table class="table table-zebra table-pin-rows table-pin-cols">
+                <thead><tr><th>Course Name</th><th>Days</th><th>Investitie</th>{% for m in 1..12 %}<th>{{ date("2026-" ~ "%02d"|format(m) ~ "-01")|date("F") }}</th>{% endfor %}</tr></thead>
+                <tbody id="scheduleTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ asset('js/app.js') }}"></script>{% endblock %}
