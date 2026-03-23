@@ -321,15 +321,23 @@ class PlanningService
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if ($extension === 'csv') {
             $raw = file($path, FILE_IGNORE_NEW_LINES);
-            if (!$raw) return [];
+            if (!$raw) {
+                return [];
+            }
+
             $delimiter = (substr_count($raw[0], ';') > substr_count($raw[0], ',')) ? ';' : ',';
-            $headers = str_getcsv(array_shift($raw), $delimiter);
+            $headers = str_getcsv((string) array_shift($raw), $delimiter, '"', '\\');
             $rows = [];
             foreach ($raw as $line) {
-                if (trim($line) === '') continue;
-                $values = str_getcsv($line, $delimiter);
-                $rows[] = array_combine($headers, array_pad($values, count($headers), ''));
+                if (trim($line) === '') {
+                    continue;
+                }
+
+                $values = str_getcsv($line, $delimiter, '"', '\\');
+                $normalizedValues = array_slice(array_pad($values, count($headers), ''), 0, count($headers));
+                $rows[] = array_combine($headers, $normalizedValues);
             }
+
             return $rows;
         }
 
