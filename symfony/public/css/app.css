@@ -1,1 +1,28 @@
-.container { max-width: 1280px; }
+.container {
+    max-width: 1280px;
+}
+
+.app-bg {
+    background-color: oklch(96% 0.005 250);
+    background-image:
+        linear-gradient(135deg, color-mix(in oklab, oklch(67% 0.18 250) 7%, transparent) 0, color-mix(in oklab, oklch(67% 0.18 250) 7%, transparent) 1px, transparent 1px, transparent 28px),
+        radial-gradient(circle at top left, color-mix(in oklab, oklch(65% 0.15 240) 16%, white) 0, transparent 48%),
+        radial-gradient(circle at bottom right, color-mix(in oklab, oklch(62% 0.2 310) 10%, white) 0, transparent 42%);
+    background-size: 34px 34px, 100% 100%, 100% 100%;
+    background-attachment: fixed;
+}
+
+.app-overlay {
+    background: linear-gradient(180deg, color-mix(in oklab, white 78%, transparent), color-mix(in oklab, white 88%, transparent));
+}
+
+.section-card {
+    border: 1px solid color-mix(in oklab, oklch(74% 0.08 250) 25%, transparent);
+    box-shadow: 0 20px 60px -32px color-mix(in oklab, oklch(58% 0.14 245) 35%, transparent);
+}
+
+.pattern-panel {
+    background-image: linear-gradient(135deg, color-mix(in oklab, oklch(65% 0.08 255) 8%, transparent) 0, color-mix(in oklab, oklch(65% 0.08 255) 8%, transparent) 1px, transparent 1px, transparent 18px);
+    background-size: 22px 22px;
+    border: 1px solid color-mix(in oklab, oklch(70% 0.08 250) 25%, transparent);
+}
