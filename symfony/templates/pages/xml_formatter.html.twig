@@ -1,14 +1,11 @@
 {% extends 'base.html.twig' %}
 {% block title %}XML formatter{% endblock %}
 {% block content %}
-<div class="card bg-base-100/95 section-card">
+<div class="card bg-base-100 shadow-xl border border-base-300">
     <div class="card-body">
-        <div class="flex items-center justify-between">
-            <h1 class="card-title text-2xl">Convertor excel to xml</h1>
-            <span class="badge badge-secondary badge-soft">daisyUI</span>
-        </div>
-        <form id="xmlForm" class="space-y-3 rounded-xl border border-base-300 p-4 pattern-panel">
-            <input class="file-input file-input-bordered w-full" type="file" id="xmlInputFile" accept=".csv,.xlsx,.xls" required>
+        <h1 class="card-title text-2xl">Convertor excel to xml</h1>
+        <form id="xmlForm" class="space-y-3 rounded-box bg-base-200 p-4">
+            <input class="file-input file-input-primary w-full" type="file" id="xmlInputFile" accept=".csv,.xlsx,.xls" required>
             <button type="submit" class="btn btn-primary">Generate XML</button>
         </form>
         <div id="xmlLoading" class="hidden alert"><span class="loading loading-spinner"></span> Generating XML...</div>

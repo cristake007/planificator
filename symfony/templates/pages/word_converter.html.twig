@@ -1,15 +1,12 @@
 {% extends 'base.html.twig' %}
 {% block title %}Word converter{% endblock %}
 {% block content %}
-<div class="card bg-base-100/95 section-card">
+<div class="card bg-base-100 shadow-xl border border-base-300">
     <div class="card-body">
-        <div class="flex items-center justify-between">
-            <h1 class="card-title text-2xl">Word to Excel Course Converter</h1>
-            <span class="badge badge-accent badge-soft">daisyUI</span>
-        </div>
-        <form id="convertWordForm" class="space-y-3 rounded-xl border border-base-300 p-4 pattern-panel">
-            <input type="file" id="wordFile" class="file-input file-input-bordered w-full" accept=".docx" required>
-            <input type="file" id="permalinksFile" class="file-input file-input-bordered w-full" accept=".xlsx,.xls,.csv" required>
+        <h1 class="card-title text-2xl">Word to Excel Course Converter</h1>
+        <form id="convertWordForm" class="space-y-3 rounded-box bg-base-200 p-4">
+            <input type="file" id="wordFile" class="file-input file-input-primary w-full" accept=".docx" required>
+            <input type="file" id="permalinksFile" class="file-input file-input-primary w-full" accept=".xlsx,.xls,.csv" required>
             <button class="btn btn-primary" type="submit">Convert and Match</button>
         </form>
         <div id="wordLoading" class="hidden alert"><span class="loading loading-spinner"></span> Converting...</div>
