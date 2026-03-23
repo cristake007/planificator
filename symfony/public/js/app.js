@@ -1,5 +1,8 @@
 let holidays = [];
 let generatedSchedule = null;
+let groupedCourses = [];
+let currentPage = 1;
+const rowsPerPage = 12;
 
 function selectAllMonths() { document.querySelectorAll('.month-checkbox').forEach(c => c.checked = true); }
 function deselectAllMonths() { document.querySelectorAll('.month-checkbox').forEach(c => c.checked = false); }
@@ -29,11 +32,62 @@ function addHolidays() {
     updateHolidayDisplay();
 }
 
-function displaySchedule(schedule) {
+function renderSchedulePage() {
     const tableBody = document.getElementById('scheduleTableBody');
+    const paginationWrap = document.getElementById('schedulePagination');
+    const pageButtons = document.getElementById('pageButtons');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    if (!tableBody || !paginationWrap || !pageButtons || !prevPageBtn || !nextPageBtn) return;
+
+    const totalPages = Math.max(1, Math.ceil(groupedCourses.length / rowsPerPage));
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (currentPage - 1) * rowsPerPage;
+    const pageData = groupedCourses.slice(start, start + rowsPerPage);
+
+    const formatCellValue = (value) => String(value || '').replace(/\s*\n\s*/g, '').trim();
+
+    tableBody.innerHTML = pageData.map(course => {
+        const monthsCells = Array.from({length: 12}, (_, i) => `<td class="text-sm">${formatCellValue(course.months[i + 1])}</td>`).join('');
+        return `<tr><td class="course-title">${course.name}</td><td>${formatCellValue(course.duration)}</td><td>${formatCellValue(course.investitie)}</td>${monthsCells}</tr>`;
+    }).join('');
+
+    paginationWrap.classList.toggle('hidden', totalPages <= 1);
+    paginationWrap.classList.toggle('flex', totalPages > 1);
+
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+    prevPageBtn.onclick = () => {
+        currentPage -= 1;
+        renderSchedulePage();
+    };
+    nextPageBtn.onclick = () => {
+        currentPage += 1;
+        renderSchedulePage();
+    };
+
+    const maxButtons = 7;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    const endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    startPage = Math.max(1, endPage - maxButtons + 1);
+
+    pageButtons.innerHTML = Array.from({length: endPage - startPage + 1}, (_, i) => {
+        const page = startPage + i;
+        const active = page === currentPage ? 'btn-primary' : 'btn-ghost';
+        return `<button type="button" class="btn btn-sm join-item ${active}" data-page="${page}">${page}</button>`;
+    }).join('');
+
+    pageButtons.querySelectorAll('[data-page]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            currentPage = Number(btn.getAttribute('data-page'));
+            renderSchedulePage();
+        });
+    });
+}
+
+function displaySchedule(schedule) {
     const courseCounter = document.getElementById('courseCounter');
-    if (!tableBody || !courseCounter) return;
-    tableBody.innerHTML = '';
+    if (!courseCounter) return;
 
     const sorted = [...schedule].sort((a, b) => a.original_order - b.original_order);
     const map = new Map();
@@ -42,16 +96,15 @@ function displaySchedule(schedule) {
         map.get(item.Title).months[item.month] = item.date_range;
     });
 
-    map.forEach(course => {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${course.name}</td><td>${course.duration}</td><td>${course.investitie}</td>` + Array.from({length: 12}, (_, i) => `<td>${course.months[i + 1] || ''}</td>`).join('');
-        tableBody.appendChild(row);
-    });
+    groupedCourses = Array.from(map.values());
+    currentPage = 1;
+    renderSchedulePage();
 
     courseCounter.innerHTML = `<strong>Course Summary:</strong><br>Total unique courses loaded: ${map.size}<br>Total scheduled sessions: ${schedule.length}`;
     courseCounter.classList.remove('hidden');
     document.getElementById('scheduleResult')?.classList.remove('hidden');
 }
+
 
 async function exportSchedule() {
     const response = await fetch('/export_schedule', {
