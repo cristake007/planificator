@@ -9,6 +9,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use RuntimeException;
 use SimpleXMLElement;
+use SplFileObject;
 use ZipArchive;
 
 class PlanningService
