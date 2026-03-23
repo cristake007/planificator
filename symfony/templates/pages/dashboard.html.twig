@@ -3,10 +3,25 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="card bg-base-100 shadow-xl">
-    <div class="card-body">
-        <h1 class="card-title">Dashboard</h1>
-        <p>Select one of the tools from navigation to keep the existing planning workflows.</p>
+<div class="space-y-6">
+    <div class="hero rounded-box border border-base-300 bg-base-100 shadow-xl angled-panel">
+        <div class="hero-content text-center py-10">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl font-bold">Planificator</h1>
+                <p class="py-4 text-base-content/80">Use the tools below to generate course periods, produce XML, and convert Word data with a consistent daisyUI interface.</p>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <a href="{{ path('generator_perioade') }}" class="btn btn-primary">Open Generator</a>
+                    <a href="{{ path('xml_formatter') }}" class="btn btn-secondary">Open XML Formatter</a>
+                    <a href="{{ path('word_to_excel') }}" class="btn btn-accent">Open Word Converter</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+        <div class="card bg-base-100 shadow-lg border border-base-300"><div class="card-body"><h2 class="card-title">Generator</h2><p>Build yearly schedules from your imported course list.</p></div></div>
+        <div class="card bg-base-100 shadow-lg border border-base-300"><div class="card-body"><h2 class="card-title">XML Formatter</h2><p>Transform spreadsheet input into XML outputs quickly.</p></div></div>
+        <div class="card bg-base-100 shadow-lg border border-base-300"><div class="card-body"><h2 class="card-title">Word Converter</h2><p>Match Word courses against permalink datasets.</p></div></div>
     </div>
 </div>
 {% endblock %}

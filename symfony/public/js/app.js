@@ -42,9 +42,12 @@ function displaySchedule(schedule) {
         map.get(item.Title).months[item.month] = item.date_range;
     });
 
+    const formatCellValue = (value) => String(value || '').replace(/\s*\n\s*/g, '').trim();
+
     map.forEach(course => {
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${course.name}</td><td>${course.duration}</td><td>${course.investitie}</td>` + Array.from({length: 12}, (_, i) => `<td>${course.months[i + 1] || ''}</td>`).join('');
+        const monthsCells = Array.from({length: 12}, (_, i) => `<td class="text-sm">${formatCellValue(course.months[i + 1])}</td>`).join('');
+        row.innerHTML = `<td class="course-title">${course.name}</td><td>${formatCellValue(course.duration)}</td><td>${formatCellValue(course.investitie)}</td>${monthsCells}`;
         tableBody.appendChild(row);
     });
 
