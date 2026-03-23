@@ -10,32 +10,16 @@
 </head>
 <body class="min-h-screen bg-base-200 text-base-content">
 <div class="angled-page min-h-screen">
-    <div class="navbar bg-base-100/95 border-b border-base-300/60 backdrop-blur sticky top-0 z-20">
-        <div class="container mx-auto px-2">
-            <div class="navbar-start">
-                <a class="btn btn-ghost text-2xl font-semibold normal-case" href="{{ path('dashboard') }}">Planificator</a>
-            </div>
-            <div class="navbar-center hidden lg:flex">
-                <ul class="menu menu-horizontal gap-1 rounded-box bg-base-200 p-1">
-                    <li><a class="font-medium" href="{{ path('generator_perioade') }}">Generator</a></li>
-                    <li><a class="font-medium" href="{{ path('xml_formatter') }}">XML Formatter</a></li>
-                    <li><a class="font-medium" href="{{ path('word_to_excel') }}">Word Converter</a></li>
-                </ul>
-            </div>
-            <div class="navbar-end lg:hidden">
-                <div class="dropdown dropdown-end">
-                    <label tabindex="0" class="btn btn-ghost btn-circle">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                    </label>
-                    <ul tabindex="0" class="menu dropdown-content mt-3 w-56 rounded-box bg-base-100 p-2 shadow-xl">
-                        <li><a href="{{ path('generator_perioade') }}">Generator</a></li>
-                        <li><a href="{{ path('xml_formatter') }}">XML Formatter</a></li>
-                        <li><a href="{{ path('word_to_excel') }}">Word Converter</a></li>
-                    </ul>
-                </div>
-            </div>
+    <header class="border-b border-base-300/60 bg-base-100/95">
+        <div class="container mx-auto px-2 py-2">
+            <a class="btn btn-neutral text-5 font-semibold normal-case" href="{{ path('dashboard') }}">Planificator</a>
+            <ul class="menu menu-horizontal mt-2 gap-1 rounded-box bg-base-200 p-1">
+                <li><a href="{{ path('generator_perioade') }}">Generator</a></li>
+                <li><a href="{{ path('xml_formatter') }}">XML Formatter</a></li>
+                <li><a href="{{ path('word_to_excel') }}">Word Converter</a></li>
+            </ul>
         </div>
-    </div>
+    </header>
 
     <main class="container mx-auto px-4 py-6 md:py-8">
         {% block content %}{% endblock %}
