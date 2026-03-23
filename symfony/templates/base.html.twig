@@ -8,22 +8,40 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
-<body class="bg-base-200 min-h-screen">
-<div class="navbar bg-base-100 shadow-sm">
-    <div class="navbar-start">
-        <a class="btn btn-ghost text-xl" href="{{ path('dashboard') }}">Planificator</a>
-    </div>
-    <div class="navbar-center hidden lg:flex">
-        <ul class="menu menu-horizontal px-1 gap-2">
-            <li><a href="{{ path('generator_perioade') }}">Generator</a></li>
-            <li><a href="{{ path('xml_formatter') }}">XML Formatter</a></li>
-            <li><a href="{{ path('word_to_excel') }}">Word Converter</a></li>
-        </ul>
-    </div>
+<body class="min-h-screen app-bg text-base-content">
+<div class="min-h-screen app-overlay">
+    <header class="sticky top-0 z-20 border-b border-base-300/70 bg-base-100/90 backdrop-blur supports-[backdrop-filter]:bg-base-100/70">
+        <div class="container mx-auto">
+            <div class="navbar px-2 md:px-4">
+                <div class="navbar-start">
+                    <a class="btn btn-ghost text-xl normal-case" href="{{ path('dashboard') }}">Planificator</a>
+                </div>
+                <div class="navbar-center hidden lg:flex">
+                    <ul class="menu menu-horizontal gap-1 rounded-box bg-base-200/80 p-1">
+                        <li><a href="{{ path('generator_perioade') }}">Generator</a></li>
+                        <li><a href="{{ path('xml_formatter') }}">XML Formatter</a></li>
+                        <li><a href="{{ path('word_to_excel') }}">Word Converter</a></li>
+                    </ul>
+                </div>
+                <div class="navbar-end lg:hidden">
+                    <div class="dropdown dropdown-end">
+                        <label tabindex="0" class="btn btn-ghost btn-circle">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        </label>
+                        <ul tabindex="0" class="menu dropdown-content mt-3 w-56 rounded-box bg-base-100 p-2 shadow">
+                            <li><a href="{{ path('generator_perioade') }}">Generator</a></li>
+                            <li><a href="{{ path('xml_formatter') }}">XML Formatter</a></li>
+                            <li><a href="{{ path('word_to_excel') }}">Word Converter</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="container mx-auto px-4 py-6 md:py-8">
+        {% block content %}{% endblock %}
+    </main>
 </div>
-<main class="container mx-auto p-4">
-    {% block content %}{% endblock %}
-</main>
 {% block scripts %}{% endblock %}
 </body>
 </html>
