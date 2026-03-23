@@ -155,7 +155,7 @@ class PlanningService
         $columns = $rows[0] ?? [];
         $normalized = [];
         foreach (array_keys($columns) as $name) {
-            $normalized[strtolower(trim((string) $name))] = $name;
+            $normalized[$this->normalizeColumnName((string) $name)] = $name;
         }
         if (!isset($normalized['title'], $normalized['permalink'])) {
             throw new RuntimeException('Missing required columns: Title, Permalink');
@@ -202,7 +202,7 @@ class PlanningService
         $headers = array_keys($rows[0]);
         $normalizedColumns = [];
         foreach ($headers as $header) {
-            $normalizedColumns[strtolower(trim((string) $header))] = $header;
+            $normalizedColumns[$this->normalizeColumnName((string) $header)] = $header;
         }
         if (!isset($normalizedColumns['title'])) {
             throw new RuntimeException('Input file must contain a "Title" column');
@@ -289,7 +289,7 @@ class PlanningService
         $sample = $rows[0];
         $normMap = [];
         foreach (array_keys($sample) as $col) {
-            $normMap[strtolower(trim((string) $col))] = $col;
+            $normMap[$this->normalizeColumnName((string) $col)] = $col;
         }
         foreach (['title' => 'Title', 'durata curs' => 'Durata Curs', 'permalink' => 'Permalink'] as $k => $v) {
             if (!isset($normMap[$k])) throw new RuntimeException("Missing required columns: {$v}");
@@ -320,16 +320,35 @@ class PlanningService
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if ($extension === 'csv') {
-            $raw = file($path, FILE_IGNORE_NEW_LINES);
-            if (!$raw) return [];
-            $delimiter = (substr_count($raw[0], ';') > substr_count($raw[0], ',')) ? ';' : ',';
-            $headers = str_getcsv(array_shift($raw), $delimiter);
-            $rows = [];
-            foreach ($raw as $line) {
-                if (trim($line) === '') continue;
-                $values = str_getcsv($line, $delimiter);
-                $rows[] = array_combine($headers, array_pad($values, count($headers), ''));
+            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (!$lines) {
+                return [];
             }
+
+            $delimiter = (substr_count($lines[0], ';') > substr_count($lines[0], ',')) ? ';' : ',';
+            $file = new SplFileObject($path, 'r');
+            $headers = $file->fgetcsv($delimiter, '"', '\\');
+            if (!is_array($headers)) {
+                return [];
+            }
+
+            $headers = array_map(fn ($value) => trim((string) $value), $headers);
+            $headerCount = count($headers);
+            if ($headerCount === 0) {
+                return [];
+            }
+
+            $rows = [];
+            while (!$file->eof()) {
+                $values = $file->fgetcsv($delimiter, '"', '\\');
+                if (!is_array($values) || $values === [null]) {
+                    continue;
+                }
+
+                $normalizedValues = array_slice(array_pad($values, $headerCount, ''), 0, $headerCount);
+                $rows[] = array_combine($headers, $normalizedValues);
+            }
+
             return $rows;
         }
 
@@ -349,6 +368,16 @@ class PlanningService
             if ($assoc) $rows[] = $assoc;
         }
         return $rows;
+    }
+
+    private function normalizeColumnName(string $name): string
+    {
+        $name = trim($name);
+        if (str_starts_with($name, "\xEF\xBB\xBF")) {
+            $name = substr($name, 3);
+        }
+
+        return strtolower(trim($name));
     }
 
     private function getAvailableStartDays(int $year, int $month, int $duration, array $holidaySet): array
