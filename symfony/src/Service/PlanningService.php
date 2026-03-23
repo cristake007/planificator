@@ -326,7 +326,7 @@ class PlanningService
                 return [];
             }
 
-            $delimiter = (substr_count($lines[0], ';') > substr_count($lines[0], ',')) ? ';' : ',';
+            $delimiter = $this->detectCsvDelimiter($lines[0]);
             $file = new SplFileObject($path, 'r');
             $headers = $file->fgetcsv($delimiter, '"', '\\');
             if (!is_array($headers)) {
@@ -369,6 +369,23 @@ class PlanningService
             if ($assoc) $rows[] = $assoc;
         }
         return $rows;
+    }
+
+    private function detectCsvDelimiter(string $firstLine): string
+    {
+        $candidates = ['@', ';', ',', "\t", '|'];
+        $bestDelimiter = ',';
+        $bestCount = -1;
+
+        foreach ($candidates as $candidate) {
+            $count = substr_count($firstLine, $candidate);
+            if ($count > $bestCount) {
+                $bestCount = $count;
+                $bestDelimiter = $candidate;
+            }
+        }
+
+        return $bestDelimiter;
     }
 
     private function normalizeColumnName(string $name): string
