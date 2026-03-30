@@ -67,6 +67,8 @@
                         wp_username: document.getElementById('wpUsername').value.trim(),
                         wp_app_password: document.getElementById('wpAppPassword').value.trim(),
                         post_id: row.post_id,
+                        permalink: row.permalink,
+                        slug: row.slug,
                         final_dates: row.final_dates || []
                     };
 
