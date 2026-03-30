@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlparse
 import re
+import time
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -26,6 +27,9 @@ class WPCourseClient:
                 "Chrome/123.0.0.0 Safari/537.36"
             ),
             "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": self.base_url + "/",
+            "Origin": self.base_url,
         })
 
     def _endpoint(self, path: str) -> str:
@@ -51,19 +55,41 @@ class WPCourseClient:
         suffix = f" ({', '.join(details)})" if details else ""
         raise requests.HTTPError(f"{response.status_code} for {response.url}{suffix}")
 
-    def _get_with_optional_auth(self, path: str, **kwargs) -> requests.Response:
+    def _get_with_optional_auth(self, path: str, prefer_auth: bool = True, **kwargs) -> requests.Response:
         last_response: requests.Response | None = None
-        for candidate_path in self._rest_candidate_paths(path):
-            for auth in (None, self.auth):
+        candidate_paths = self._rest_candidate_paths(path)
+
+        auth_sequence = [self.auth] if prefer_auth else [None, self.auth]
+        fallback_auth_sequence = [None] if prefer_auth else []
+
+        for candidate_path in candidate_paths:
+            for auth in auth_sequence:
                 response = self.session.get(
                     self._endpoint(candidate_path),
                     auth=auth,
-                    timeout=20,
+                    timeout=30,
                     **kwargs,
                 )
                 if response.ok:
                     return response
                 last_response = response
+
+                # Back off gently if edge/CDN is throttling or challenging.
+                if response.status_code in (403, 429):
+                    time.sleep(0.35)
+
+                # If auth was rejected, try the same path once without auth.
+                if response.status_code == 401 and fallback_auth_sequence:
+                    for fallback_auth in fallback_auth_sequence:
+                        fallback = self.session.get(
+                            self._endpoint(candidate_path),
+                            auth=fallback_auth,
+                            timeout=30,
+                            **kwargs,
+                        )
+                        if fallback.ok:
+                            return fallback
+                        last_response = fallback
 
         if last_response is not None:
             self._raise_for_response(last_response)
@@ -74,7 +100,7 @@ class WPCourseClient:
         if not slug:
             return None
 
-        response = self._get_with_optional_auth('/wp-json/wp/v2/cursuri', params={'slug': slug})
+        response = self._get_with_optional_auth('/wp-json/wp/v2/cursuri', prefer_auth=True, params={'slug': slug})
         data = response.json()
         if isinstance(data, list) and data:
             return data[0]
@@ -82,7 +108,7 @@ class WPCourseClient:
 
     def get_course(self, post_id: int) -> dict[str, Any]:
         """Fetch full WP post including ACF."""
-        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}')
+        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}', prefer_auth=True)
         return response.json()
 
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
@@ -98,11 +124,13 @@ class WPCourseClient:
                 self._endpoint(candidate_path),
                 auth=auth or self.auth,
                 json=payload,
-                timeout=20,
+                timeout=30,
             )
             if response.ok:
                 return response.json()
             last_response = response
+            if response.status_code in (403, 429):
+                time.sleep(0.35)
 
         if last_response is not None:
             self._raise_for_response(last_response)
