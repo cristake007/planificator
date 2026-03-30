@@ -671,6 +671,8 @@ def preview_safe_course_date_updates():
             permalink = str(row_dict.get('Permalink', '') or '').strip()
             slug = extract_slug_from_permalink(permalink)
 
+            excel_dates = parse_excel_dates_from_row(row_dict)
+
             row_payload = {
                 'row_index': int(idx),
                 'title': title,
@@ -678,7 +680,7 @@ def preview_safe_course_date_updates():
                 'slug': slug,
                 'post_id': None,
                 'existing_valid_dates': [],
-                'excel_dates': [],
+                'excel_dates': excel_dates,
                 'final_dates': [],
                 'status': '',
                 'error': None,
@@ -712,14 +714,12 @@ def preview_safe_course_date_updates():
 
                 existing_program = course.get('acf', {}).get('program') or []
                 existing_valid = valid_existing_program(existing_program, today)
-                excel_dates = parse_excel_dates_from_row(row_dict)
                 final_program = build_final_program(existing_program, excel_dates, today)
 
                 existing_valid_dates = [item['data'] for item in existing_valid]
                 final_dates = [item['data'] for item in final_program]
 
                 row_payload['existing_valid_dates'] = existing_valid_dates
-                row_payload['excel_dates'] = excel_dates
                 row_payload['final_dates'] = final_dates
                 row_payload['payload'] = {
                     'acf': {

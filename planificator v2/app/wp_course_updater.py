@@ -22,18 +22,21 @@ class WPCourseClient:
     def _endpoint(self, path: str) -> str:
         return f"{self.base_url}{path}"
 
+    def _get_with_optional_auth(self, path: str, **kwargs) -> requests.Response:
+        response = requests.get(self._endpoint(path), auth=self.auth, timeout=20, **kwargs)
+        if response.status_code in (401, 403):
+            fallback = requests.get(self._endpoint(path), timeout=20, **kwargs)
+            if fallback.ok:
+                return fallback
+        response.raise_for_status()
+        return response
+
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
         """Resolve WP course by slug."""
         if not slug:
             return None
 
-        response = requests.get(
-            self._endpoint('/wp-json/wp/v2/cursuri'),
-            params={'slug': slug},
-            auth=self.auth,
-            timeout=20,
-        )
-        response.raise_for_status()
+        response = self._get_with_optional_auth('/wp-json/wp/v2/cursuri', params={'slug': slug})
         data = response.json()
         if isinstance(data, list) and data:
             return data[0]
@@ -41,12 +44,7 @@ class WPCourseClient:
 
     def get_course(self, post_id: int) -> dict[str, Any]:
         """Fetch full WP post including ACF."""
-        response = requests.get(
-            self._endpoint(f'/wp-json/wp/v2/cursuri/{post_id}'),
-            auth=self.auth,
-            timeout=20,
-        )
-        response.raise_for_status()
+        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}')
         return response.json()
 
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
@@ -84,6 +82,21 @@ def parse_single_ro_date(value: str) -> date:
     return datetime.strptime(value.strip(), "%d.%m.%Y").date()
 
 
+def _normalize_excel_date_value(value: Any) -> str:
+    if value is None:
+        return ''
+
+    if hasattr(value, 'to_pydatetime'):
+        value = value.to_pydatetime()
+
+    if isinstance(value, datetime):
+        return value.strftime("%d.%m.%Y")
+    if isinstance(value, date):
+        return value.strftime("%d.%m.%Y")
+
+    return str(value).strip()
+
+
 def expand_date_token(token: str) -> list[str]:
     """
     Expand one token:
@@ -91,14 +104,21 @@ def expand_date_token(token: str) -> list[str]:
     - 14-15.04.2026 -> ['14.04.2026', '15.04.2026']
     - 21-23.04.2026 -> ['21.04.2026', '22.04.2026', '23.04.2026']
     """
-    token = str(token or '').strip()
-    if not token:
+    token = _normalize_excel_date_value(token)
+    if not token or token.lower() == 'nan':
         return []
 
-    if re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", token):
-        return [token]
+    token = token.replace('–', '-').replace('—', '-')
 
-    match = re.fullmatch(r"(\d{2})-(\d{2})\.(\d{2})\.(\d{4})", token)
+    if re.fullmatch(r"\d{1,2}\.\d{1,2}\.\d{4}", token):
+        parsed = datetime.strptime(token, "%d.%m.%Y")
+        return [parsed.strftime("%d.%m.%Y")]
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2}:\d{2})?", token):
+        parsed = datetime.strptime(token[:10], "%Y-%m-%d")
+        return [parsed.strftime("%d.%m.%Y")]
+
+    match = re.fullmatch(r"(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})", token)
     if not match:
         return []
 
@@ -121,10 +141,8 @@ def expand_date_token(token: str) -> list[str]:
     return out
 
 
-def split_cell_tokens(value: str) -> list[str]:
-    if value is None:
-        return []
-    text = str(value).strip()
+def split_cell_tokens(value: Any) -> list[str]:
+    text = _normalize_excel_date_value(value)
     if not text or text.lower() == 'nan':
         return []
     return [part.strip() for part in re.split(r"[,\n;]+", text) if part and part.strip()]
@@ -133,8 +151,10 @@ def split_cell_tokens(value: str) -> list[str]:
 def parse_excel_dates_from_row(row: dict) -> list[str]:
     """Read all month columns and return normalized dd.mm.yyyy strings."""
     dates: list[str] = []
+    lowered_row = {str(key).strip().lower(): value for key, value in (row or {}).items()}
+
     for column in MONTH_COLUMNS:
-        raw = row.get(column)
+        raw = lowered_row.get(column.lower())
         for token in split_cell_tokens(raw):
             dates.extend(expand_date_token(token))
     return dates
@@ -153,9 +173,10 @@ def _normalize_program_rows(program: list[dict], today: date) -> list[dict[str, 
         except ValueError:
             continue
 
-        if dt >= today and raw not in seen:
-            normalized.append({'data': raw})
-            seen.add(raw)
+        normalized_raw = dt.strftime("%d.%m.%Y")
+        if dt >= today and normalized_raw not in seen:
+            normalized.append({'data': normalized_raw})
+            seen.add(normalized_raw)
 
     normalized.sort(key=lambda item: parse_single_ro_date(item['data']))
     return normalized
@@ -181,9 +202,10 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
         except ValueError:
             continue
 
-        if dt >= today and normalized not in seen:
-            result.append({'data': normalized})
-            seen.add(normalized)
+        formatted = dt.strftime("%d.%m.%Y")
+        if dt >= today and formatted not in seen:
+            result.append({'data': formatted})
+            seen.add(formatted)
 
     result.sort(key=lambda item: parse_single_ro_date(item['data']))
     return result
