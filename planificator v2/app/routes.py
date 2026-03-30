@@ -13,6 +13,13 @@ from docx import Document
 from app.file_handlers import read_input_file, create_excel_export
 from rapidfuzz import process, fuzz
 from app.scheduler import CourseScheduler
+from app.wp_course_updater import (
+    WPCourseClient,
+    extract_slug_from_permalink,
+    parse_excel_dates_from_row,
+    build_final_program,
+    valid_existing_program,
+)
 scheduler_bp = Blueprint('scheduler', __name__)
 
 import xml.etree.ElementTree as ET
@@ -629,3 +636,147 @@ def convert_word():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 400
+
+
+@scheduler_bp.route('/safe-course-date-updater')
+def safe_course_date_updater():
+    return render_template('safe_course_date_updater.html')
+
+
+@scheduler_bp.route('/api/safe-course-date-updater/preview', methods=['POST'])
+def preview_safe_course_date_updates():
+    try:
+        file = request.files.get('input_file')
+        wp_base_url = str(request.form.get('wp_base_url', '')).strip()
+        wp_username = str(request.form.get('wp_username', '')).strip()
+        wp_app_password = str(request.form.get('wp_app_password', '')).strip()
+
+        if not file:
+            return jsonify({'success': False, 'error': 'Please upload an Excel file.'}), 400
+        if not wp_base_url or not wp_username or not wp_app_password:
+            return jsonify({'success': False, 'error': 'WordPress URL, username, and application password are required.'}), 400
+
+        file_extension = os.path.splitext(file.filename or '')[1].lower()
+        if file_extension not in {'.xlsx', '.xls'}:
+            return jsonify({'success': False, 'error': 'Only .xlsx or .xls files are supported.'}), 400
+
+        df = pd.read_excel(io.BytesIO(file.read()), dtype=str)
+        client = WPCourseClient(wp_base_url, wp_username, wp_app_password)
+        today = datetime.utcnow().date()
+
+        rows = []
+        for idx, row in df.iterrows():
+            row_dict = row.to_dict()
+            title = str(row_dict.get('Title', '') or '').strip()
+            permalink = str(row_dict.get('Permalink', '') or '').strip()
+            slug = extract_slug_from_permalink(permalink)
+
+            row_payload = {
+                'row_index': int(idx),
+                'title': title,
+                'permalink': permalink,
+                'slug': slug,
+                'post_id': None,
+                'existing_valid_dates': [],
+                'excel_dates': [],
+                'final_dates': [],
+                'status': '',
+                'error': None,
+                'can_update': False,
+                'payload': {'acf': {'program': False}},
+            }
+
+            if not permalink:
+                row_payload['status'] = 'error'
+                row_payload['error'] = 'Missing permalink.'
+                rows.append(row_payload)
+                continue
+
+            if not slug:
+                row_payload['status'] = 'error'
+                row_payload['error'] = 'Unable to extract slug from permalink.'
+                rows.append(row_payload)
+                continue
+
+            try:
+                course_summary = client.get_course_by_slug(slug)
+                if not course_summary:
+                    row_payload['status'] = 'error'
+                    row_payload['error'] = 'Course not found by slug.'
+                    rows.append(row_payload)
+                    continue
+
+                post_id = int(course_summary.get('id'))
+                row_payload['post_id'] = post_id
+                course = client.get_course(post_id)
+
+                existing_program = course.get('acf', {}).get('program') or []
+                existing_valid = valid_existing_program(existing_program, today)
+                excel_dates = parse_excel_dates_from_row(row_dict)
+                final_program = build_final_program(existing_program, excel_dates, today)
+
+                existing_valid_dates = [item['data'] for item in existing_valid]
+                final_dates = [item['data'] for item in final_program]
+
+                row_payload['existing_valid_dates'] = existing_valid_dates
+                row_payload['excel_dates'] = excel_dates
+                row_payload['final_dates'] = final_dates
+                row_payload['payload'] = {
+                    'acf': {
+                        'program': final_program if final_program else False,
+                    }
+                }
+
+                changed = existing_valid_dates != final_dates
+                has_valid_dates = bool(final_dates)
+                row_payload['can_update'] = bool(permalink and post_id and has_valid_dates and changed)
+
+                if not has_valid_dates:
+                    row_payload['status'] = 'no valid dates'
+                elif not changed:
+                    row_payload['status'] = 'no changes'
+                else:
+                    row_payload['status'] = 'ready'
+            except Exception as exc:
+                row_payload['status'] = 'error'
+                row_payload['error'] = str(exc)
+
+            rows.append(row_payload)
+
+        return jsonify({'success': True, 'rows': rows})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@scheduler_bp.route('/api/safe-course-date-updater/update-row', methods=['POST'])
+def update_safe_course_date_row():
+    try:
+        payload = request.get_json(force=True) or {}
+        wp_base_url = str(payload.get('wp_base_url', '')).strip()
+        wp_username = str(payload.get('wp_username', '')).strip()
+        wp_app_password = str(payload.get('wp_app_password', '')).strip()
+        post_id = payload.get('post_id')
+        final_dates = payload.get('final_dates') or []
+
+        if not wp_base_url or not wp_username or not wp_app_password:
+            return jsonify({'success': False, 'error': 'Missing WordPress credentials.'}), 400
+        if not post_id:
+            return jsonify({'success': False, 'error': 'Missing post_id.'}), 400
+
+        final_program = [{'data': str(value).strip()} for value in final_dates if str(value).strip()]
+        client = WPCourseClient(wp_base_url, wp_username, wp_app_password)
+        today = datetime.utcnow().date()
+
+        course = client.get_course(int(post_id))
+        existing_program = course.get('acf', {}).get('program') or []
+        current_valid = [item['data'] for item in valid_existing_program(existing_program, today)]
+        final_valid = [item['data'] for item in build_final_program(existing_program, [item['data'] for item in final_program], today)]
+
+        if current_valid == final_valid:
+            return jsonify({'success': True, 'status': 'no changes', 'post_id': int(post_id)})
+
+        merged_program = [{'data': value} for value in final_valid]
+        client.update_course_program(int(post_id), merged_program, client.auth)
+        return jsonify({'success': True, 'status': 'success', 'post_id': int(post_id), 'final_dates': final_valid})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
