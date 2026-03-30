@@ -725,6 +725,12 @@ def update_safe_course_date_row():
         today = datetime.utcnow().date()
 
         if not post_id:
+            if permalink:
+                permalink_post_id = client.get_post_id_from_permalink(permalink)
+                if permalink_post_id:
+                    post_id = int(permalink_post_id)
+
+        if not post_id:
             course_summary = client.get_course_by_slug(slug)
             if not course_summary:
                 return jsonify({'success': False, 'error': 'Course not found by slug.'}), 404
@@ -741,5 +747,36 @@ def update_safe_course_date_row():
         merged_program = [{'data': value} for value in final_valid]
         client.update_course_program(int(post_id), merged_program, client.auth)
         return jsonify({'success': True, 'status': 'success', 'post_id': int(post_id), 'final_dates': final_valid})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@scheduler_bp.route('/api/safe-course-date-updater/resolve-post-id', methods=['POST'])
+def resolve_safe_course_post_id():
+    try:
+        payload = request.get_json(force=True) or {}
+        wp_base_url = str(payload.get('wp_base_url', '')).strip()
+        wp_username = str(payload.get('wp_username', '')).strip()
+        wp_app_password = str(payload.get('wp_app_password', '')).strip()
+        permalink = str(payload.get('permalink', '')).strip()
+        slug = str(payload.get('slug', '')).strip() or extract_slug_from_permalink(permalink)
+
+        if not wp_base_url:
+            return jsonify({'success': False, 'error': 'Missing WordPress base URL.'}), 400
+        if not permalink and not slug:
+            return jsonify({'success': False, 'error': 'Missing permalink and slug.'}), 400
+
+        client = WPCourseClient(wp_base_url, wp_username, wp_app_password)
+        post_id = None
+        if permalink:
+            post_id = client.get_post_id_from_permalink(permalink)
+        if not post_id and slug:
+            course_summary = client.get_course_by_slug(slug)
+            if course_summary:
+                post_id = int(course_summary.get('id'))
+
+        if not post_id:
+            return jsonify({'success': False, 'error': 'Could not resolve post ID.'}), 404
+        return jsonify({'success': True, 'post_id': int(post_id)})
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400

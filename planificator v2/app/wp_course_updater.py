@@ -109,6 +109,32 @@ class WPCourseClient:
         response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}', prefer_auth=True)
         return response.json()
 
+    def get_post_id_from_permalink(self, permalink: str) -> int | None:
+        """Extract WP post id from public course HTML page."""
+        url = str(permalink or "").strip()
+        if not url:
+            return None
+
+        response = self.session.get(url, timeout=30)
+        if not response.ok:
+            return None
+
+        html = response.text or ""
+        patterns = [
+            r'postid-(\d+)',
+            r'id=["\']post-(\d+)["\']',
+            r'"post_id"\s*:\s*"?(\d+)"?',
+            r'"postId"\s*:\s*"?(\d+)"?',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html, flags=re.IGNORECASE)
+            if match:
+                try:
+                    return int(match.group(1))
+                except (TypeError, ValueError):
+                    continue
+        return None
+
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
         """POST only acf.program back to WP."""
         payload = {
