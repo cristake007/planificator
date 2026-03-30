@@ -89,31 +89,18 @@ class WPCourseClient:
         raise requests.HTTPError(f"Unable to fetch endpoint for path: {path}")
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
-        """Resolve WP course by slug from /wp-json/wp/v2/cursuri listing."""
+        """Resolve WP course by slug using the canonical WP slug query endpoint."""
         if not slug:
             return None
 
-        page = 1
-        total_pages = 1
-
-        while page <= total_pages:
-            response = self._get_with_optional_auth(
-                '/wp-json/wp/v2/cursuri',
-                prefer_auth=True,
-                params={'per_page': 100, 'page': page},
-            )
-            data = response.json()
-            if isinstance(data, list):
-                for course in data:
-                    current_slug = str((course or {}).get('slug', '')).strip()
-                    if current_slug == slug:
-                        return course
-
-            try:
-                total_pages = int(response.headers.get('X-WP-TotalPages', total_pages))
-            except (TypeError, ValueError):
-                total_pages = page
-            page += 1
+        response = self._get_with_optional_auth(
+            '/wp-json/wp/v2/cursuri',
+            prefer_auth=True,
+            params={'slug': slug},
+        )
+        data = response.json()
+        if isinstance(data, list) and data:
+            return data[0]
         return None
 
     def get_course(self, post_id: int) -> dict[str, Any]:
@@ -190,6 +177,31 @@ def parse_single_ro_date(value: str) -> date:
     """Parse dd.mm.yyyy."""
     return datetime.strptime(value.strip(), "%d.%m.%Y").date()
 
+
+
+
+def parse_effective_end_date(text: str) -> date | None:
+    text = str(text or "").strip()
+    if not text:
+        return None
+
+    m1 = re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", text)
+    if m1:
+        d, m, y = map(int, m1.groups())
+        try:
+            return date(y, m, d)
+        except ValueError:
+            return None
+
+    m2 = re.fullmatch(r"(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})", text)
+    if m2:
+        _start_day, end_day, month, year = map(int, m2.groups())
+        try:
+            return date(year, month, end_day)
+        except ValueError:
+            return None
+
+    return None
 
 def _normalize_excel_date_value(value: Any) -> str:
     if value is None:
@@ -271,7 +283,7 @@ def parse_excel_dates_from_row(row: dict) -> list[str]:
     return dates
 
 
-def _normalize_program_rows(program: list[dict], today: date) -> list[dict[str, str]]:
+def _filter_existing_non_expired_rows(program: list[dict], today: date) -> list[dict[str, str]]:
     normalized: list[dict[str, str]] = []
     seen: set[str] = set()
 
@@ -279,26 +291,23 @@ def _normalize_program_rows(program: list[dict], today: date) -> list[dict[str, 
         raw = str((row or {}).get('data', '')).strip()
         if not raw:
             continue
-        try:
-            dt = parse_single_ro_date(raw)
-        except ValueError:
+        end_dt = parse_effective_end_date(raw)
+        if end_dt is None:
             continue
 
-        normalized_raw = dt.strftime("%d.%m.%Y")
-        if dt >= today and normalized_raw not in seen:
-            normalized.append({'data': normalized_raw})
-            seen.add(normalized_raw)
+        if end_dt >= today and raw not in seen:
+            normalized.append({'data': raw})
+            seen.add(raw)
 
-    normalized.sort(key=lambda item: parse_single_ro_date(item['data']))
     return normalized
 
 
 def build_final_program(existing_program: list, excel_dates: list[str], today: date) -> list[dict]:
-    """Keep valid current WP dates, add Excel values as raw text, and dedupe."""
+    """Keep non-expired existing rows unchanged, append Excel text unchanged, dedupe by exact text."""
     seen: set[str] = set()
     result: list[dict[str, str]] = []
 
-    for row in _normalize_program_rows(existing_program, today):
+    for row in _filter_existing_non_expired_rows(existing_program, today):
         raw = row['data']
         if raw not in seen:
             result.append({'data': raw})
@@ -315,4 +324,4 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
 
 
 def valid_existing_program(existing_program: list, today: date) -> list[dict[str, str]]:
-    return _normalize_program_rows(existing_program, today)
+    return _filter_existing_non_expired_rows(existing_program, today)
