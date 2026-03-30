@@ -21,15 +21,9 @@ class WPCourseClient:
         self.auth = HTTPBasicAuth((username or "").strip(), (app_password or "").strip())
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/123.0.0.0 Safari/537.36"
-            ),
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": self.base_url + "/",
-            "Origin": self.base_url,
+            "User-Agent": "insomnia/11.0.2",
+            "Accept": "*/*",
+            "Content-Type": "application/json",
         })
 
     def _endpoint(self, path: str) -> str:
@@ -37,7 +31,11 @@ class WPCourseClient:
 
     def _rest_candidate_paths(self, path: str) -> list[str]:
         normalized = path if path.startswith("/") else f"/{path}"
-        rest_route = f"/?rest_route={normalized}"
+        if normalized.startswith("/wp-json/"):
+            rest_route_path = normalized[len("/wp-json"):]
+        else:
+            rest_route_path = normalized
+        rest_route = f"/?rest_route={rest_route_path}"
         return [normalized, rest_route]
 
     @staticmethod
