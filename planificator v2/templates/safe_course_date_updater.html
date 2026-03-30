@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Safe Course Date Updater{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0">Safe Per-Course Date Updates</h4>
+    </div>
+    <div class="card-body">
+        <form id="safeUpdaterForm" class="row g-3" enctype="multipart/form-data">
+            <div class="col-md-6">
+                <label for="wpBaseUrl" class="form-label">WordPress Base URL</label>
+                <input type="url" class="form-control" id="wpBaseUrl" placeholder="https://tuvkarpat.ro" required>
+            </div>
+            <div class="col-md-3">
+                <label for="wpUsername" class="form-label">WP Username</label>
+                <input type="text" class="form-control" id="wpUsername" required>
+            </div>
+            <div class="col-md-3">
+                <label for="wpAppPassword" class="form-label">Application Password</label>
+                <input type="password" class="form-control" id="wpAppPassword" required>
+            </div>
+            <div class="col-md-6">
+                <label for="excelFile" class="form-label">Excel file (.xlsx/.xls)</label>
+                <input type="file" class="form-control" id="excelFile" accept=".xlsx,.xls" required>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary" id="previewBtn">Preview rows</button>
+            </div>
+        </form>
+
+        <div id="previewError" class="alert alert-danger mt-3 d-none"></div>
+
+        <div id="previewContainer" class="mt-4 d-none">
+            <h5>Preview</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle" id="previewTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Permalink</th>
+                            <th>Slug</th>
+                            <th>Post ID</th>
+                            <th>Existing valid dates</th>
+                            <th>New dates from Excel</th>
+                            <th>Final merged dates</th>
+                            <th>Status</th>
+                            <th>Update</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/safe_course_date_updater.js') }}"></script>
+{% endblock %}

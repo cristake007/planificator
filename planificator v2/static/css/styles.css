@@ -104,14 +104,14 @@ body {
     overflow-x: auto;
 }
 
-.table {
+.table-container .table {
     width: 100%;
     transform: rotateX(180deg);
     border-collapse: collapse;
 }
 
-.table th:first-child,
-.table td:first-child {
+.table-container .table th:first-child,
+.table-container .table td:first-child {
     position: sticky;
     left: 0;
     min-width: 350px;
@@ -120,13 +120,13 @@ body {
     z-index: 1;
 }
 
-.table th:not(:first-child),
-.table td:not(:first-child) {
+.table-container .table th:not(:first-child),
+.table-container .table td:not(:first-child) {
     white-space: nowrap;
 }
 
-.table th, 
-.table td {
+.table-container .table th, 
+.table-container .table td {
     padding: 5px;
     text-align: center;
     border: 1px solid #dee2e6;
