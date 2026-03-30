@@ -18,18 +18,56 @@ class WPCourseClient:
     def __init__(self, base_url: str, username: str, app_password: str):
         self.base_url = (base_url or "").strip().rstrip("/")
         self.auth = HTTPBasicAuth((username or "").strip(), (app_password or "").strip())
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json, text/plain, */*",
+        })
 
     def _endpoint(self, path: str) -> str:
         return f"{self.base_url}{path}"
 
+    def _rest_candidate_paths(self, path: str) -> list[str]:
+        normalized = path if path.startswith("/") else f"/{path}"
+        rest_route = f"/?rest_route={normalized}"
+        return [normalized, rest_route]
+
+    @staticmethod
+    def _raise_for_response(response: requests.Response) -> None:
+        if response.ok:
+            return
+
+        server = response.headers.get("server", "")
+        cf_ray = response.headers.get("cf-ray", "")
+        details = []
+        if server:
+            details.append(f"server={server}")
+        if cf_ray:
+            details.append(f"cf-ray={cf_ray}")
+        suffix = f" ({', '.join(details)})" if details else ""
+        raise requests.HTTPError(f"{response.status_code} for {response.url}{suffix}")
+
     def _get_with_optional_auth(self, path: str, **kwargs) -> requests.Response:
-        response = requests.get(self._endpoint(path), auth=self.auth, timeout=20, **kwargs)
-        if response.status_code in (401, 403):
-            fallback = requests.get(self._endpoint(path), timeout=20, **kwargs)
-            if fallback.ok:
-                return fallback
-        response.raise_for_status()
-        return response
+        last_response: requests.Response | None = None
+        for candidate_path in self._rest_candidate_paths(path):
+            for auth in (None, self.auth):
+                response = self.session.get(
+                    self._endpoint(candidate_path),
+                    auth=auth,
+                    timeout=20,
+                    **kwargs,
+                )
+                if response.ok:
+                    return response
+                last_response = response
+
+        if last_response is not None:
+            self._raise_for_response(last_response)
+        raise requests.HTTPError(f"Unable to fetch endpoint for path: {path}")
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
         """Resolve WP course by slug."""
@@ -54,14 +92,21 @@ class WPCourseClient:
                 'program': final_program if final_program else False,
             }
         }
-        response = requests.post(
-            self._endpoint(f'/wp-json/wp/v2/cursuri/{post_id}'),
-            auth=auth or self.auth,
-            json=payload,
-            timeout=20,
-        )
-        response.raise_for_status()
-        return response.json()
+        last_response: requests.Response | None = None
+        for candidate_path in self._rest_candidate_paths(f'/wp-json/wp/v2/cursuri/{post_id}'):
+            response = self.session.post(
+                self._endpoint(candidate_path),
+                auth=auth or self.auth,
+                json=payload,
+                timeout=20,
+            )
+            if response.ok:
+                return response.json()
+            last_response = response
+
+        if last_response is not None:
+            self._raise_for_response(last_response)
+        raise requests.HTTPError(f"Unable to update endpoint for post_id={post_id}")
 
 
 def extract_slug_from_permalink(url: str) -> str:

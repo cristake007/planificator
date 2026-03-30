@@ -672,6 +672,8 @@ def preview_safe_course_date_updates():
             slug = extract_slug_from_permalink(permalink)
 
             excel_dates = parse_excel_dates_from_row(row_dict)
+            excel_only_program = build_final_program([], excel_dates, today)
+            excel_only_dates = [item['data'] for item in excel_only_program]
 
             row_payload = {
                 'row_index': int(idx),
@@ -681,11 +683,11 @@ def preview_safe_course_date_updates():
                 'post_id': None,
                 'existing_valid_dates': [],
                 'excel_dates': excel_dates,
-                'final_dates': [],
+                'final_dates': excel_only_dates,
                 'status': '',
                 'error': None,
                 'can_update': False,
-                'payload': {'acf': {'program': False}},
+                'payload': {'acf': {'program': excel_only_program if excel_only_program else False}},
             }
 
             if not permalink:
