@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlparse
 import re
+import time
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -18,34 +19,133 @@ class WPCourseClient:
     def __init__(self, base_url: str, username: str, app_password: str):
         self.base_url = (base_url or "").strip().rstrip("/")
         self.auth = HTTPBasicAuth((username or "").strip(), (app_password or "").strip())
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "insomnia/11.0.2",
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+        })
 
     def _endpoint(self, path: str) -> str:
         return f"{self.base_url}{path}"
 
-    def _get_with_optional_auth(self, path: str, **kwargs) -> requests.Response:
-        response = requests.get(self._endpoint(path), auth=self.auth, timeout=20, **kwargs)
-        if response.status_code in (401, 403):
-            fallback = requests.get(self._endpoint(path), timeout=20, **kwargs)
-            if fallback.ok:
-                return fallback
-        response.raise_for_status()
-        return response
+    def _rest_candidate_paths(self, path: str) -> list[str]:
+        normalized = path if path.startswith("/") else f"/{path}"
+        return [normalized]
+
+    @staticmethod
+    def _raise_for_response(response: requests.Response) -> None:
+        if response.ok:
+            return
+
+        server = response.headers.get("server", "")
+        cf_ray = response.headers.get("cf-ray", "")
+        details = []
+        if server:
+            details.append(f"server={server}")
+        if cf_ray:
+            details.append(f"cf-ray={cf_ray}")
+        suffix = f" ({', '.join(details)})" if details else ""
+        raise requests.HTTPError(f"{response.status_code} for {response.url}{suffix}")
+
+    def _get_with_optional_auth(self, path: str, prefer_auth: bool = True, **kwargs) -> requests.Response:
+        last_response: requests.Response | None = None
+        candidate_paths = self._rest_candidate_paths(path)
+
+        auth_sequence = [self.auth] if prefer_auth else [None, self.auth]
+        fallback_auth_sequence = [None] if prefer_auth else []
+
+        for candidate_path in candidate_paths:
+            for auth in auth_sequence:
+                response = self.session.get(
+                    self._endpoint(candidate_path),
+                    auth=auth,
+                    timeout=30,
+                    **kwargs,
+                )
+                if response.ok:
+                    return response
+                last_response = response
+
+                # Back off gently if edge/CDN is throttling or challenging.
+                if response.status_code in (403, 429):
+                    time.sleep(0.35)
+
+                # If auth was rejected, try the same path once without auth.
+                if response.status_code == 401 and fallback_auth_sequence:
+                    for fallback_auth in fallback_auth_sequence:
+                        fallback = self.session.get(
+                            self._endpoint(candidate_path),
+                            auth=fallback_auth,
+                            timeout=30,
+                            **kwargs,
+                        )
+                        if fallback.ok:
+                            return fallback
+                        last_response = fallback
+
+        if last_response is not None:
+            self._raise_for_response(last_response)
+        raise requests.HTTPError(f"Unable to fetch endpoint for path: {path}")
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
-        """Resolve WP course by slug."""
+        """Resolve WP course by slug from /wp-json/wp/v2/cursuri listing."""
         if not slug:
             return None
 
-        response = self._get_with_optional_auth('/wp-json/wp/v2/cursuri', params={'slug': slug})
-        data = response.json()
-        if isinstance(data, list) and data:
-            return data[0]
+        page = 1
+        total_pages = 1
+
+        while page <= total_pages:
+            response = self._get_with_optional_auth(
+                '/wp-json/wp/v2/cursuri',
+                prefer_auth=True,
+                params={'per_page': 100, 'page': page},
+            )
+            data = response.json()
+            if isinstance(data, list):
+                for course in data:
+                    current_slug = str((course or {}).get('slug', '')).strip()
+                    if current_slug == slug:
+                        return course
+
+            try:
+                total_pages = int(response.headers.get('X-WP-TotalPages', total_pages))
+            except (TypeError, ValueError):
+                total_pages = page
+            page += 1
         return None
 
     def get_course(self, post_id: int) -> dict[str, Any]:
         """Fetch full WP post including ACF."""
-        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}')
+        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}', prefer_auth=True)
         return response.json()
+
+    def get_post_id_from_permalink(self, permalink: str) -> int | None:
+        """Extract WP post id from public course HTML page."""
+        url = str(permalink or "").strip()
+        if not url:
+            return None
+
+        response = self.session.get(url, timeout=30)
+        if not response.ok:
+            return None
+
+        html = response.text or ""
+        patterns = [
+            r'postid-(\d+)',
+            r'id=["\']post-(\d+)["\']',
+            r'"post_id"\s*:\s*"?(\d+)"?',
+            r'"postId"\s*:\s*"?(\d+)"?',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html, flags=re.IGNORECASE)
+            if match:
+                try:
+                    return int(match.group(1))
+                except (TypeError, ValueError):
+                    continue
+        return None
 
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
         """POST only acf.program back to WP."""
@@ -54,14 +154,23 @@ class WPCourseClient:
                 'program': final_program if final_program else False,
             }
         }
-        response = requests.post(
-            self._endpoint(f'/wp-json/wp/v2/cursuri/{post_id}'),
-            auth=auth or self.auth,
-            json=payload,
-            timeout=20,
-        )
-        response.raise_for_status()
-        return response.json()
+        last_response: requests.Response | None = None
+        for candidate_path in self._rest_candidate_paths(f'/wp-json/wp/v2/cursuri/{post_id}'):
+            response = self.session.post(
+                self._endpoint(candidate_path),
+                auth=auth or self.auth,
+                json=payload,
+                timeout=30,
+            )
+            if response.ok:
+                return response.json()
+            last_response = response
+            if response.status_code in (403, 429):
+                time.sleep(0.35)
+
+        if last_response is not None:
+            self._raise_for_response(last_response)
+        raise requests.HTTPError(f"Unable to update endpoint for post_id={post_id}")
 
 
 def extract_slug_from_permalink(url: str) -> str:
@@ -145,18 +254,20 @@ def split_cell_tokens(value: Any) -> list[str]:
     text = _normalize_excel_date_value(value)
     if not text or text.lower() == 'nan':
         return []
-    return [part.strip() for part in re.split(r"[,\n;]+", text) if part and part.strip()]
+    return [text]
 
 
 def parse_excel_dates_from_row(row: dict) -> list[str]:
-    """Read all month columns and return normalized dd.mm.yyyy strings."""
+    """Read all month columns and keep original text values as provided in Excel."""
     dates: list[str] = []
     lowered_row = {str(key).strip().lower(): value for key, value in (row or {}).items()}
 
     for column in MONTH_COLUMNS:
         raw = lowered_row.get(column.lower())
         for token in split_cell_tokens(raw):
-            dates.extend(expand_date_token(token))
+            normalized = str(token).strip()
+            if normalized:
+                dates.append(normalized)
     return dates
 
 
@@ -183,7 +294,7 @@ def _normalize_program_rows(program: list[dict], today: date) -> list[dict[str, 
 
 
 def build_final_program(existing_program: list, excel_dates: list[str], today: date) -> list[dict]:
-    """Keep valid current dates, add Excel dates, dedupe, sort."""
+    """Keep valid current WP dates, add Excel values as raw text, and dedupe."""
     seen: set[str] = set()
     result: list[dict[str, str]] = []
 
@@ -197,17 +308,9 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
         normalized = str(raw).strip()
         if not normalized:
             continue
-        try:
-            dt = parse_single_ro_date(normalized)
-        except ValueError:
-            continue
-
-        formatted = dt.strftime("%d.%m.%Y")
-        if dt >= today and formatted not in seen:
-            result.append({'data': formatted})
-            seen.add(formatted)
-
-    result.sort(key=lambda item: parse_single_ro_date(item['data']))
+        if normalized not in seen:
+            result.append({'data': normalized})
+            seen.add(normalized)
     return result
 
 

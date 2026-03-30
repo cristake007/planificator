@@ -34,12 +34,16 @@
 
             const statusText = row.error ? `error: ${row.error}` : row.status;
             const disabled = row.can_update ? '' : 'disabled';
+            const resolveDisabled = row.post_id || !row.permalink ? 'disabled' : '';
+            const postIdContent = row.post_id
+                ? `${row.post_id}`
+                : `<button class="btn btn-sm btn-outline-secondary resolve-post-id-btn" ${resolveDisabled}>Get post ID</button>`;
 
             tr.innerHTML = `
                 <td>${escapeHtml(row.title)}</td>
                 <td><small>${escapeHtml(row.permalink)}</small></td>
                 <td><code>${escapeHtml(row.slug)}</code></td>
-                <td>${row.post_id ?? '-'}</td>
+                <td class="post-id-cell">${postIdContent}</td>
                 <td>${formatList(row.existing_valid_dates)}</td>
                 <td>${formatList(row.excel_dates)}</td>
                 <td>
@@ -56,6 +60,42 @@
             `;
 
             const updateButton = tr.querySelector('.update-row-btn');
+            const resolveButton = tr.querySelector('.resolve-post-id-btn');
+            const postIdCell = tr.querySelector('.post-id-cell');
+
+            if (resolveButton) {
+                resolveButton.addEventListener('click', async () => {
+                    resolveButton.disabled = true;
+                    const statusCell = tr.querySelector('.status-cell');
+                    statusCell.textContent = 'resolving post id...';
+                    try {
+                        const payload = {
+                            wp_base_url: document.getElementById('wpBaseUrl').value.trim(),
+                            wp_username: document.getElementById('wpUsername').value.trim(),
+                            wp_app_password: document.getElementById('wpAppPassword').value.trim(),
+                            permalink: row.permalink,
+                            slug: row.slug
+                        };
+                        const response = await fetch('/api/safe-course-date-updater/resolve-post-id', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Unable to resolve post ID');
+                        }
+
+                        row.post_id = data.post_id;
+                        postIdCell.textContent = String(data.post_id);
+                        statusCell.textContent = 'post id resolved';
+                    } catch (error) {
+                        statusCell.textContent = `error: ${error.message}`;
+                        resolveButton.disabled = false;
+                    }
+                });
+            }
+
             updateButton.addEventListener('click', async () => {
                 updateButton.disabled = true;
                 const statusCell = tr.querySelector('.status-cell');
@@ -67,6 +107,8 @@
                         wp_username: document.getElementById('wpUsername').value.trim(),
                         wp_app_password: document.getElementById('wpAppPassword').value.trim(),
                         post_id: row.post_id,
+                        permalink: row.permalink,
+                        slug: row.slug,
                         final_dates: row.final_dates || []
                     };
 
