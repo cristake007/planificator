@@ -56,9 +56,15 @@ function isValidDate(dateStr) {
     return date instanceof Date && !isNaN(date);
 }
 
-document.getElementById('randomness').addEventListener('input', function() {
-    document.getElementById('randomnessValue').textContent = this.value;
-});
+const randomnessInput = document.getElementById('randomness');
+if (randomnessInput) {
+    randomnessInput.addEventListener('input', function() {
+        const randomnessValue = document.getElementById('randomnessValue');
+        if (randomnessValue) {
+            randomnessValue.textContent = this.value;
+        }
+    });
+}
 
 async function exportSchedule() {
     try {
@@ -168,7 +174,9 @@ function displaySchedule(schedule) {
 }
 
 
-document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+const scheduleForm = document.getElementById('scheduleForm');
+if (scheduleForm) {
+scheduleForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const formData = new FormData();
@@ -258,6 +266,7 @@ document.getElementById('scheduleForm').addEventListener('submit', async (e) => 
         document.getElementById('loadingSpinner').style.display = 'none';
     }
 });
+}
 
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -267,6 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingSpinner = document.getElementById('loadingSpinner');
     const errorAlert = document.getElementById('errorAlert');
     const successMessage = document.getElementById('successMessage');
+
+    if (!form || !fileInput || !fileName || !loadingSpinner || !errorAlert || !successMessage) {
+        return;
+    }
 
     // Debug logging
     console.log('Script loaded', {
