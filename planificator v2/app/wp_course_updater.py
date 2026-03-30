@@ -31,12 +31,7 @@ class WPCourseClient:
 
     def _rest_candidate_paths(self, path: str) -> list[str]:
         normalized = path if path.startswith("/") else f"/{path}"
-        if normalized.startswith("/wp-json/"):
-            rest_route_path = normalized[len("/wp-json"):]
-        else:
-            rest_route_path = normalized
-        rest_route = f"/?rest_route={rest_route_path}"
-        return [normalized, rest_route]
+        return [normalized]
 
     @staticmethod
     def _raise_for_response(response: requests.Response) -> None:
@@ -94,14 +89,31 @@ class WPCourseClient:
         raise requests.HTTPError(f"Unable to fetch endpoint for path: {path}")
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
-        """Resolve WP course by slug."""
+        """Resolve WP course by slug from /wp-json/wp/v2/cursuri listing."""
         if not slug:
             return None
 
-        response = self._get_with_optional_auth('/wp-json/wp/v2/cursuri', prefer_auth=True, params={'slug': slug})
-        data = response.json()
-        if isinstance(data, list) and data:
-            return data[0]
+        page = 1
+        total_pages = 1
+
+        while page <= total_pages:
+            response = self._get_with_optional_auth(
+                '/wp-json/wp/v2/cursuri',
+                prefer_auth=True,
+                params={'per_page': 100, 'page': page},
+            )
+            data = response.json()
+            if isinstance(data, list):
+                for course in data:
+                    current_slug = str((course or {}).get('slug', '')).strip()
+                    if current_slug == slug:
+                        return course
+
+            try:
+                total_pages = int(response.headers.get('X-WP-TotalPages', total_pages))
+            except (TypeError, ValueError):
+                total_pages = page
+            page += 1
         return None
 
     def get_course(self, post_id: int) -> dict[str, Any]:
