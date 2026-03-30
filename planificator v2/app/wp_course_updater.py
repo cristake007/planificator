@@ -190,18 +190,20 @@ def split_cell_tokens(value: Any) -> list[str]:
     text = _normalize_excel_date_value(value)
     if not text or text.lower() == 'nan':
         return []
-    return [part.strip() for part in re.split(r"[,\n;]+", text) if part and part.strip()]
+    return [text]
 
 
 def parse_excel_dates_from_row(row: dict) -> list[str]:
-    """Read all month columns and return normalized dd.mm.yyyy strings."""
+    """Read all month columns and keep original text values as provided in Excel."""
     dates: list[str] = []
     lowered_row = {str(key).strip().lower(): value for key, value in (row or {}).items()}
 
     for column in MONTH_COLUMNS:
         raw = lowered_row.get(column.lower())
         for token in split_cell_tokens(raw):
-            dates.extend(expand_date_token(token))
+            normalized = str(token).strip()
+            if normalized:
+                dates.append(normalized)
     return dates
 
 
@@ -228,7 +230,7 @@ def _normalize_program_rows(program: list[dict], today: date) -> list[dict[str, 
 
 
 def build_final_program(existing_program: list, excel_dates: list[str], today: date) -> list[dict]:
-    """Keep valid current dates, add Excel dates, dedupe, sort."""
+    """Keep valid current WP dates, add Excel values as raw text, and dedupe."""
     seen: set[str] = set()
     result: list[dict[str, str]] = []
 
@@ -242,17 +244,9 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
         normalized = str(raw).strip()
         if not normalized:
             continue
-        try:
-            dt = parse_single_ro_date(normalized)
-        except ValueError:
-            continue
-
-        formatted = dt.strftime("%d.%m.%Y")
-        if dt >= today and formatted not in seen:
-            result.append({'data': formatted})
-            seen.add(formatted)
-
-    result.sort(key=lambda item: parse_single_ro_date(item['data']))
+        if normalized not in seen:
+            result.append({'data': normalized})
+            seen.add(normalized)
     return result
 
 
