@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlparse
+import random
 import re
 import time
 
@@ -18,20 +19,73 @@ MONTH_COLUMNS = [
 class WPCourseClient:
     def __init__(self, base_url: str, username: str, app_password: str):
         self.base_url = (base_url or "").strip().rstrip("/")
-        self.auth = HTTPBasicAuth((username or "").strip(), (app_password or "").strip())
+
+        clean_username = (username or "").strip()
+        clean_password = (app_password or "").strip().replace(" ", "")
+
+        self.auth = HTTPBasicAuth(clean_username, clean_password)
         self.session = requests.Session()
+
+        # Match the successful local behavior more closely.
         self.session.headers.update({
             "User-Agent": "insomnia/11.0.2",
             "Accept": "*/*",
             "Content-Type": "application/json",
+            "Origin": self.base_url,
+            "Referer": f"{self.base_url}/",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
         })
 
+        # Gentle pacing defaults to reduce pressure on Cloudflare/WP.
+        self.timeout = 30
+        self.min_interval_seconds = 0.85
+        self.max_retries = 4
+        self.base_backoff_seconds = 1.25
+        self.last_request_ts = 0.0
+
     def _endpoint(self, path: str) -> str:
-        return f"{self.base_url}{path}"
+        normalized = path if path.startswith("/") else f"/{path}"
+        return f"{self.base_url}{normalized}"
 
     def _rest_candidate_paths(self, path: str) -> list[str]:
         normalized = path if path.startswith("/") else f"/{path}"
         return [normalized]
+
+    def _sleep_for_spacing(self) -> None:
+        now = time.monotonic()
+        elapsed = now - self.last_request_ts
+        if elapsed < self.min_interval_seconds:
+            time.sleep(self.min_interval_seconds - elapsed)
+
+    def _mark_request_complete(self) -> None:
+        self.last_request_ts = time.monotonic()
+
+    @staticmethod
+    def _is_cloudflare_challenge(response: requests.Response) -> bool:
+        return (
+            response.headers.get("cf-mitigated", "").lower() == "challenge"
+            or "just a moment" in (response.text or "").lower()
+        )
+
+    @staticmethod
+    def _retry_after_seconds(response: requests.Response) -> float | None:
+        value = (response.headers.get("Retry-After") or "").strip()
+        if not value:
+            return None
+        try:
+            return max(0.0, float(value))
+        except ValueError:
+            return None
+
+    def _compute_backoff(self, attempt_index: int, response: requests.Response | None = None) -> float:
+        retry_after = self._retry_after_seconds(response) if response is not None else None
+        if retry_after is not None:
+            return retry_after + random.uniform(0.1, 0.4)
+
+        delay = self.base_backoff_seconds * (2 ** attempt_index)
+        delay = min(delay, 12.0)
+        return delay + random.uniform(0.1, 0.5)
 
     @staticmethod
     def _raise_for_response(response: requests.Response) -> None:
@@ -40,53 +94,98 @@ class WPCourseClient:
 
         server = response.headers.get("server", "")
         cf_ray = response.headers.get("cf-ray", "")
+        cf_mitigated = response.headers.get("cf-mitigated", "")
         details = []
         if server:
             details.append(f"server={server}")
         if cf_ray:
             details.append(f"cf-ray={cf_ray}")
+        if cf_mitigated:
+            details.append(f"cf-mitigated={cf_mitigated}")
         suffix = f" ({', '.join(details)})" if details else ""
+
+        if WPCourseClient._is_cloudflare_challenge(response):
+            raise requests.HTTPError(
+                f"{response.status_code} for {response.url}{suffix} - blocked by Cloudflare challenge"
+            )
+
         raise requests.HTTPError(f"{response.status_code} for {response.url}{suffix}")
 
-    def _get_with_optional_auth(self, path: str, prefer_auth: bool = True, **kwargs) -> requests.Response:
+    def _request_with_retries(
+        self,
+        method: str,
+        path: str,
+        *,
+        auth=None,
+        retry_on_401_without_auth: bool = False,
+        **kwargs,
+    ) -> requests.Response:
         last_response: requests.Response | None = None
         candidate_paths = self._rest_candidate_paths(path)
 
-        auth_sequence = [self.auth] if prefer_auth else [None, self.auth]
-        fallback_auth_sequence = [None] if prefer_auth else []
-
         for candidate_path in candidate_paths:
-            for auth in auth_sequence:
-                response = self.session.get(
-                    self._endpoint(candidate_path),
+            url = self._endpoint(candidate_path)
+
+            for attempt in range(self.max_retries + 1):
+                self._sleep_for_spacing()
+
+                response = self.session.request(
+                    method=method.upper(),
+                    url=url,
                     auth=auth,
-                    timeout=30,
+                    timeout=self.timeout,
                     **kwargs,
                 )
+                self._mark_request_complete()
+
                 if response.ok:
                     return response
+
                 last_response = response
 
-                # Back off gently if edge/CDN is throttling or challenging.
-                if response.status_code in (403, 429):
-                    time.sleep(0.35)
+                if response.status_code == 401 and retry_on_401_without_auth and auth is not None:
+                    self._sleep_for_spacing()
+                    fallback = self.session.request(
+                        method=method.upper(),
+                        url=url,
+                        auth=None,
+                        timeout=self.timeout,
+                        **kwargs,
+                    )
+                    self._mark_request_complete()
+                    if fallback.ok:
+                        return fallback
+                    last_response = fallback
 
-                # If auth was rejected, try the same path once without auth.
-                if response.status_code == 401 and fallback_auth_sequence:
-                    for fallback_auth in fallback_auth_sequence:
-                        fallback = self.session.get(
-                            self._endpoint(candidate_path),
-                            auth=fallback_auth,
-                            timeout=30,
-                            **kwargs,
-                        )
-                        if fallback.ok:
-                            return fallback
-                        last_response = fallback
+                # Do not hammer the edge if challenged or throttled.
+                if response.status_code in (403, 429, 500, 502, 503, 504):
+                    if attempt < self.max_retries:
+                        time.sleep(self._compute_backoff(attempt, response))
+                        continue
+
+                break
 
         if last_response is not None:
             self._raise_for_response(last_response)
-        raise requests.HTTPError(f"Unable to fetch endpoint for path: {path}")
+        raise requests.HTTPError(f"Unable to call endpoint for path: {path}")
+
+    def _get_with_optional_auth(self, path: str, prefer_auth: bool = True, **kwargs) -> requests.Response:
+        if prefer_auth:
+            return self._request_with_retries(
+                "GET",
+                path,
+                auth=self.auth,
+                retry_on_401_without_auth=True,
+                **kwargs,
+            )
+
+        return self._request_with_retries(
+            "GET",
+            path,
+            auth=None,
+            retry_on_401_without_auth=False,
+            **kwargs,
+        )
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
         """Resolve WP course by slug using the canonical WP slug query endpoint."""
@@ -94,9 +193,9 @@ class WPCourseClient:
             return None
 
         response = self._get_with_optional_auth(
-            '/wp-json/wp/v2/cursuri',
+            "/wp-json/wp/v2/cursuri",
             prefer_auth=True,
-            params={'slug': slug},
+            params={"slug": slug},
         )
         data = response.json()
         if isinstance(data, list) and data:
@@ -105,7 +204,10 @@ class WPCourseClient:
 
     def get_course(self, post_id: int) -> dict[str, Any]:
         """Fetch full WP post including ACF."""
-        response = self._get_with_optional_auth(f'/wp-json/wp/v2/cursuri/{post_id}', prefer_auth=True)
+        response = self._get_with_optional_auth(
+            f"/wp-json/wp/v2/cursuri/{int(post_id)}",
+            prefer_auth=True,
+        )
         return response.json()
 
     def get_post_id_from_permalink(self, permalink: str) -> int | None:
@@ -114,8 +216,14 @@ class WPCourseClient:
         if not url:
             return None
 
-        response = self.session.get(url, timeout=30)
-        if not response.ok:
+        response = self._request_with_retries(
+            "GET",
+            url,
+            auth=None,
+            retry_on_401_without_auth=False,
+        ) if url.startswith("http://") or url.startswith("https://") else None
+
+        if response is None or not response.ok:
             return None
 
         html = response.text or ""
@@ -137,47 +245,37 @@ class WPCourseClient:
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
         """POST only acf.program back to WP."""
         payload = {
-            'acf': {
-                'program': final_program if final_program else False,
+            "acf": {
+                "program": final_program if final_program else False,
             }
         }
-        last_response: requests.Response | None = None
-        for candidate_path in self._rest_candidate_paths(f'/wp-json/wp/v2/cursuri/{post_id}'):
-            response = self.session.post(
-                self._endpoint(candidate_path),
-                auth=auth or self.auth,
-                json=payload,
-                timeout=30,
-            )
-            if response.ok:
-                return response.json()
-            last_response = response
-            if response.status_code in (403, 429):
-                time.sleep(0.35)
 
-        if last_response is not None:
-            self._raise_for_response(last_response)
-        raise requests.HTTPError(f"Unable to update endpoint for post_id={post_id}")
+        response = self._request_with_retries(
+            "POST",
+            f"/wp-json/wp/v2/cursuri/{int(post_id)}",
+            auth=auth or self.auth,
+            retry_on_401_without_auth=False,
+            json=payload,
+        )
+        return response.json()
 
 
 def extract_slug_from_permalink(url: str) -> str:
     """Return slug from course permalink."""
-    parsed = urlparse((url or '').strip())
-    path = (parsed.path or '').strip('/ ')
+    parsed = urlparse((url or "").strip())
+    path = (parsed.path or "").strip("/ ")
     if not path:
-        return ''
+        return ""
 
-    parts = [part for part in path.split('/') if part]
+    parts = [part for part in path.split("/") if part]
     if not parts:
-        return ''
+        return ""
     return parts[-1]
 
 
 def parse_single_ro_date(value: str) -> date:
     """Parse dd.mm.yyyy."""
     return datetime.strptime(value.strip(), "%d.%m.%Y").date()
-
-
 
 
 def parse_effective_end_date(text: str) -> date | None:
@@ -203,11 +301,12 @@ def parse_effective_end_date(text: str) -> date | None:
 
     return None
 
+
 def _normalize_excel_date_value(value: Any) -> str:
     if value is None:
-        return ''
+        return ""
 
-    if hasattr(value, 'to_pydatetime'):
+    if hasattr(value, "to_pydatetime"):
         value = value.to_pydatetime()
 
     if isinstance(value, datetime):
@@ -226,10 +325,10 @@ def expand_date_token(token: str) -> list[str]:
     - 21-23.04.2026 -> ['21.04.2026', '22.04.2026', '23.04.2026']
     """
     token = _normalize_excel_date_value(token)
-    if not token or token.lower() == 'nan':
+    if not token or token.lower() == "nan":
         return []
 
-    token = token.replace('–', '-').replace('—', '-')
+    token = token.replace("–", "-").replace("—", "-")
 
     if re.fullmatch(r"\d{1,2}\.\d{1,2}\.\d{4}", token):
         parsed = datetime.strptime(token, "%d.%m.%Y")
@@ -264,7 +363,7 @@ def expand_date_token(token: str) -> list[str]:
 
 def split_cell_tokens(value: Any) -> list[str]:
     text = _normalize_excel_date_value(value)
-    if not text or text.lower() == 'nan':
+    if not text or text.lower() == "nan":
         return []
     return [text]
 
@@ -288,7 +387,7 @@ def _filter_existing_non_expired_rows(program: list[dict], today: date) -> list[
     seen: set[str] = set()
 
     for row in program or []:
-        raw = str((row or {}).get('data', '')).strip()
+        raw = str((row or {}).get("data", "")).strip()
         if not raw:
             continue
         end_dt = parse_effective_end_date(raw)
@@ -296,7 +395,7 @@ def _filter_existing_non_expired_rows(program: list[dict], today: date) -> list[
             continue
 
         if end_dt >= today and raw not in seen:
-            normalized.append({'data': raw})
+            normalized.append({"data": raw})
             seen.add(raw)
 
     return normalized
@@ -308,9 +407,9 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
     result: list[dict[str, str]] = []
 
     for row in _filter_existing_non_expired_rows(existing_program, today):
-        raw = row['data']
+        raw = row["data"]
         if raw not in seen:
-            result.append({'data': raw})
+            result.append({"data": raw})
             seen.add(raw)
 
     for raw in excel_dates:
@@ -318,7 +417,7 @@ def build_final_program(existing_program: list, excel_dates: list[str], today: d
         if not normalized:
             continue
         if normalized not in seen:
-            result.append({'data': normalized})
+            result.append({"data": normalized})
             seen.add(normalized)
     return result
 
