@@ -680,7 +680,7 @@ def preview_safe_course_date_updates():
                 'final_dates': excel_only_dates,
                 'status': 'preview ready',
                 'error': None,
-                'can_update': bool(permalink and excel_only_dates),
+                'can_update': bool(slug and excel_only_dates),
                 'payload': {'acf': {'program': excel_only_program if excel_only_program else False}},
             }
 
@@ -717,36 +717,48 @@ def update_safe_course_date_row():
 
         if not wp_base_url or not wp_username or not wp_app_password:
             return jsonify({'success': False, 'error': 'Missing WordPress credentials.'}), 400
-        if not post_id and not slug:
-            return jsonify({'success': False, 'error': 'Missing post_id and slug/permalink.'}), 400
+        if not slug:
+            return jsonify({'success': False, 'error': 'Missing slug/permalink.'}), 400
 
         final_program = [{'data': str(value).strip()} for value in final_dates if str(value).strip()]
         client = WPCourseClient(wp_base_url, wp_username, wp_app_password)
         today = datetime.utcnow().date()
 
-        if not post_id:
-            if permalink:
-                permalink_post_id = client.get_post_id_from_permalink(permalink)
-                if permalink_post_id:
-                    post_id = int(permalink_post_id)
+        resolved_post_id = client.resolve_course_post_id(
+            slug=slug,
+            permalink=permalink,
+            fallback_post_id=post_id,
+        )
+        if not resolved_post_id:
+            return jsonify({'success': False, 'error': f'Course not found by slug: {slug}'}), 404
 
-        if not post_id:
-            course_summary = client.get_course_by_slug(slug)
-            if not course_summary:
-                return jsonify({'success': False, 'error': 'Course not found by slug.'}), 404
-            post_id = int(course_summary.get('id'))
-
-        course = client.get_course(int(post_id))
+        course = client.get_course(int(resolved_post_id))
         existing_program = course.get('acf', {}).get('program') or []
         current_valid = [item['data'] for item in valid_existing_program(existing_program, today)]
-        final_valid = [item['data'] for item in build_final_program(existing_program, [item['data'] for item in final_program], today)]
+        final_valid = [item['data'] for item in build_final_program(
+            existing_program,
+            [item['data'] for item in final_program],
+            today
+        )]
 
         if current_valid == final_valid:
-            return jsonify({'success': True, 'status': 'no changes', 'post_id': int(post_id)})
+            return jsonify({
+                'success': True,
+                'status': 'no changes',
+                'updated': False,
+                'post_id': int(resolved_post_id)
+            })
 
         merged_program = [{'data': value} for value in final_valid]
-        client.update_course_program(int(post_id), merged_program, client.auth)
-        return jsonify({'success': True, 'status': 'success', 'post_id': int(post_id), 'final_dates': final_valid})
+        client.update_course_program(int(resolved_post_id), merged_program, client.auth)
+
+        return jsonify({
+            'success': True,
+            'status': 'success',
+            'updated': True,
+            'post_id': int(resolved_post_id),
+            'final_dates': final_valid
+        })
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400
 
@@ -763,20 +775,15 @@ def resolve_safe_course_post_id():
 
         if not wp_base_url:
             return jsonify({'success': False, 'error': 'Missing WordPress base URL.'}), 400
-        if not permalink and not slug:
-            return jsonify({'success': False, 'error': 'Missing permalink and slug.'}), 400
+        if not slug:
+            return jsonify({'success': False, 'error': 'Missing slug/permalink.'}), 400
 
         client = WPCourseClient(wp_base_url, wp_username, wp_app_password)
-        post_id = None
-        if permalink:
-            post_id = client.get_post_id_from_permalink(permalink)
-        if not post_id and slug:
-            course_summary = client.get_course_by_slug(slug)
-            if course_summary:
-                post_id = int(course_summary.get('id'))
+        post_id = client.resolve_course_post_id(slug=slug, permalink=permalink)
 
         if not post_id:
-            return jsonify({'success': False, 'error': 'Could not resolve post ID.'}), 404
+            return jsonify({'success': False, 'error': 'Could not resolve post ID from REST slug lookup.'}), 404
+
         return jsonify({'success': True, 'post_id': int(post_id)})
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 400

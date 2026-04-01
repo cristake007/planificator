@@ -26,7 +26,6 @@ class WPCourseClient:
         self.auth = HTTPBasicAuth(clean_username, clean_password)
         self.session = requests.Session()
 
-        # Match the successful local behavior more closely.
         self.session.headers.update({
             "User-Agent": "insomnia/11.0.2",
             "Accept": "*/*",
@@ -37,7 +36,6 @@ class WPCourseClient:
             "Pragma": "no-cache",
         })
 
-        # Gentle pacing defaults to reduce pressure on Cloudflare/WP.
         self.timeout = 30
         self.min_interval_seconds = 0.85
         self.max_retries = 4
@@ -157,7 +155,6 @@ class WPCourseClient:
                         return fallback
                     last_response = fallback
 
-                # Do not hammer the edge if challenged or throttled.
                 if response.status_code in (403, 429, 500, 502, 503, 504):
                     if attempt < self.max_retries:
                         time.sleep(self._compute_backoff(attempt, response))
@@ -189,6 +186,7 @@ class WPCourseClient:
 
     def get_course_by_slug(self, slug: str) -> dict[str, Any] | None:
         """Resolve WP course by slug using the canonical WP slug query endpoint."""
+        slug = str(slug or "").strip()
         if not slug:
             return None
 
@@ -198,9 +196,41 @@ class WPCourseClient:
             params={"slug": slug},
         )
         data = response.json()
-        if isinstance(data, list) and data:
-            return data[0]
+
+        if not isinstance(data, list):
+            return None
+
+        for item in data:
+            if str((item or {}).get("slug", "")).strip() == slug:
+                return item
+
         return None
+
+    def resolve_course_post_id(
+        self,
+        slug: str | None = None,
+        permalink: str | None = None,
+        fallback_post_id: int | None = None,
+    ) -> int | None:
+        """
+        Resolve the correct course post ID using only the canonical REST slug lookup.
+        """
+        clean_slug = str(slug or "").strip()
+
+        if not clean_slug and permalink:
+            clean_slug = extract_slug_from_permalink(permalink)
+
+        if not clean_slug:
+            return None
+
+        course = self.get_course_by_slug(clean_slug)
+        if not course or course.get("id") is None:
+            return None
+
+        try:
+            return int(course["id"])
+        except (TypeError, ValueError):
+            return None
 
     def get_course(self, post_id: int) -> dict[str, Any]:
         """Fetch full WP post including ACF."""
@@ -209,38 +239,6 @@ class WPCourseClient:
             prefer_auth=True,
         )
         return response.json()
-
-    def get_post_id_from_permalink(self, permalink: str) -> int | None:
-        """Extract WP post id from public course HTML page."""
-        url = str(permalink or "").strip()
-        if not url:
-            return None
-
-        response = self._request_with_retries(
-            "GET",
-            url,
-            auth=None,
-            retry_on_401_without_auth=False,
-        ) if url.startswith("http://") or url.startswith("https://") else None
-
-        if response is None or not response.ok:
-            return None
-
-        html = response.text or ""
-        patterns = [
-            r'postid-(\d+)',
-            r'id=["\']post-(\d+)["\']',
-            r'"post_id"\s*:\s*"?(\d+)"?',
-            r'"postId"\s*:\s*"?(\d+)"?',
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, html, flags=re.IGNORECASE)
-            if match:
-                try:
-                    return int(match.group(1))
-                except (TypeError, ValueError):
-                    continue
-        return None
 
     def update_course_program(self, post_id: int, final_program: list[dict], auth=None) -> dict[str, Any]:
         """POST only acf.program back to WP."""
