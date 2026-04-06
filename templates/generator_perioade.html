@@ -11,8 +11,9 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label for="inputFile" class="block text-sm font-medium mb-2 text-gray-700">Input File (CSV or Excel)</label>
-        <input type="file" class="block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+        <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border-2 border-dashed border-blue-300 bg-blue-50/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
         <p class="mt-2 text-xs text-gray-500"><strong>Expected input columns:</strong> <code>Title</code>, <code>Durata Curs</code>, <code>investitie</code> (optional), <code>Permalink</code>.</p>
+        <p class="mt-1 text-xs text-gray-500">Accepted formats: .csv, .xlsx, .xls</p>
       </div>
       <div>
         <label for="year" class="block text-sm font-medium mb-2 text-gray-700">Year</label>
@@ -24,8 +25,8 @@
       <label class="block text-sm font-medium mb-3 text-gray-700">Select Months</label>
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
         {% for month_num, month_name in [(1,'January'),(2,'February'),(3,'March'),(4,'April'),(5,'May'),(6,'June'),(7,'July'),(8,'August'),(9,'September'),(10,'October'),(11,'November'),(12,'December')] %}
-        <label class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
-          <input class="month-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" type="checkbox" value="{{ month_num }}" id="month{{ month_num }}">
+        <label class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 hover:border-blue-300 hover:bg-blue-50/50">
+          <input class="month-checkbox size-4 rounded border-2 border-gray-400 text-blue-600 focus:ring-blue-500 focus:ring-offset-0" type="checkbox" value="{{ month_num }}" id="month{{ month_num }}">
           <span class="text-sm text-gray-700">{{ month_name }}</span>
         </label>
         {% endfor %}
@@ -64,7 +65,7 @@
     <p class="mt-2 text-sm text-gray-500">Generating schedule...</p>
   </div>
 
-  <div id="errorAlert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" style="display: none;" role="alert"></div>
+  <div id="errorAlert" class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" style="display: none;" role="alert"></div>
   <div id="courseCounter" class="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700" style="display: none;" role="alert"></div>
 
   <div id="scheduleResult" style="display: none;" class="space-y-3">
