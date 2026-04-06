@@ -56,19 +56,19 @@
 
     <div class="flex flex-wrap gap-2">
       <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">Generate Schedule</button>
-      <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-emerald-600 text-white hover:bg-emerald-700" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
+      <button type="button" class="app-hidden py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-emerald-600 text-white hover:bg-emerald-700" onclick="exportSchedule()" id="exportBtn">Export to Excel</button>
     </div>
   </form>
 
-  <div id="loadingSpinner" style="display: none;" class="text-center py-6">
+  <div id="loadingSpinner" class="app-hidden text-center py-6">
     <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"></div>
     <p class="mt-2 text-sm text-gray-500">Generating schedule...</p>
   </div>
 
-  <div id="errorAlert" class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" style="display: none;" role="alert"></div>
-  <div id="courseCounter" class="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700" style="display: none;" role="alert"></div>
+  <div id="errorAlert" class="app-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></div>
+  <div id="courseCounter" class="app-hidden rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700" role="alert"></div>
 
-  <div id="scheduleResult" style="display: none;" class="space-y-3">
+  <div id="scheduleResult" class="app-hidden space-y-3">
     <h2 class="text-lg font-semibold text-gray-800">Generated Schedule</h2>
     <div class="overflow-x-auto border border-gray-200 rounded-xl">
       <table class="min-w-full divide-y divide-gray-200 text-sm">

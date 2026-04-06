@@ -19,14 +19,14 @@
     <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">Convert and Match</button>
   </form>
 
-  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert" style="display: none;">
+  <div class="app-hidden rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert">
     Excel file has been generated successfully!
   </div>
 
-  <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" style="display: none;" role="alert"></div>
+  <div class="app-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" role="alert"></div>
 </div>
 
-<div class="fixed inset-0 bg-gray-900/40 z-50 hidden" id="loadingSpinner" style="display: none;">
+<div class="app-hidden fixed inset-0 bg-gray-900/40 z-50" id="loadingSpinner">
   <div class="h-full flex items-center justify-center">
     <div class="bg-white rounded-xl p-6 text-center shadow-lg">
       <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full mb-3"></div>
@@ -42,7 +42,7 @@
         const fileInput = document.getElementById('inputFile').files[0];
         formData.append('input_file', fileInput);
 
-        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('loadingSpinner').classList.remove('app-hidden');
 
         try {
             const response = await fetch('/convert_word', {
@@ -63,15 +63,15 @@
             a.click();
             window.URL.revokeObjectURL(url); // Clean up URL
 
-            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('successMessage').classList.remove('app-hidden');
             setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('successMessage').classList.add('app-hidden');
             }, 5000);
         } catch (error) {
             document.getElementById('errorAlert').textContent = error.message;
-            document.getElementById('errorAlert').style.display = 'block';
+            document.getElementById('errorAlert').classList.remove('app-hidden');
         } finally {
-            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingSpinner').classList.add('app-hidden');
         }
     });
 </script>
