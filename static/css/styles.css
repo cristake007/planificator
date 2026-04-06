@@ -29,6 +29,28 @@
   display: none !important;
 }
 
+.content-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-base-100),
+    var(--color-base-100) 13px,
+    var(--color-base-200) 13px,
+    var(--color-base-200) 14px
+  );
+  background-size: 40px 40px;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-collapsed #app-sidebar {
+    display: none !important;
+  }
+
+  .sidebar-collapsed #app-main {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+}
+
 /* Slightly tighter spacing + softer corners across controls. */
 button,
 input,

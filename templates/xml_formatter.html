@@ -3,19 +3,19 @@
 {% block content %}
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-gray-800">Convertor excel to xml</h1>
-    <p class="text-sm text-gray-500 mt-1">Upload a spreadsheet and generate a formatted XML file.</p>
+    <h1 class="text-2xl font-semibold text-base-foreground">Convertor excel to xml</h1>
+    <p class="text-sm text-muted-foreground mt-1">Upload a spreadsheet and generate a formatted XML file.</p>
   </div>
 
   <form id="xmlForm" class="space-y-4">
     <div>
-      <label for="inputFile" class="block text-sm font-medium mb-2 text-gray-700">Input File (CSV or Excel)</label>
-      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border-2 border-dashed border-blue-300 bg-blue-50/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
-      <div class="mt-2 text-sm text-gray-500" id="fileName"></div>
-      <p class="mt-2 text-xs text-gray-500">Supported formats: .csv, .xlsx, .xls. Required columns: Title, Permalink and month columns.</p>
+      <label for="inputFile" class="block text-sm font-medium mb-2 text-base-foreground">Input File (CSV or Excel)</label>
+      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary-hover border-2 border-dashed border-base-line bg-base-200/40 focus:border-primary focus:ring-2 focus:ring-base-line" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+      <div class="mt-2 text-sm text-muted-foreground" id="fileName"></div>
+      <p class="mt-2 text-xs text-muted-foreground">Supported formats: .csv, .xlsx, .xls. Required columns: Title, Permalink and month columns.</p>
     </div>
 
-    <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">
+    <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover">
       Generate XML
     </button>
   </form>
@@ -27,11 +27,11 @@
   <div class="app-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" role="alert"></div>
 </div>
 
-<div class="app-hidden fixed inset-0 bg-gray-900/40 z-50" id="loadingSpinner">
+<div class="app-hidden fixed inset-0 bg-base/70 z-50" id="loadingSpinner">
   <div class="h-full flex items-center justify-center">
     <div class="bg-white rounded-xl p-6 text-center shadow-lg">
-      <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full mb-3"></div>
-      <div class="text-sm text-gray-600">Generating XML...</div>
+      <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-primary rounded-full mb-3"></div>
+      <div class="text-sm text-muted-foreground">Generating XML...</div>
     </div>
   </div>
 </div>
