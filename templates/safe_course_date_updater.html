@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="space-y-6">
-  <div class="border border-base-line bg-layer rounded-xl shadow-sm p-5">
+  <div class="border border-base-line bg-layer rounded-lg shadow-sm p-5">
     <div class="mb-4">
       <h2 class="text-lg font-semibold text-base-foreground">Safe Course Date Updater</h2>
       <p class="text-sm text-muted-foreground mt-1">Connect to WordPress and preview date updates before applying changes.</p>
@@ -31,23 +31,23 @@
     </form>
   </div>
 
-  <div id="previewError" class="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 d-none">Unable to preview rows. Please check your credentials, file format, and required columns.</div>
+  <div id="previewError" class="app-hidden rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">Unable to preview rows. Please check your credentials, file format, and required columns.</div>
 
-  <div id="previewContainer" class="space-y-3 d-none">
+  <div id="previewContainer" class="space-y-3 app-hidden">
     <h5 class="text-base font-semibold text-base-foreground">Preview</h5>
-    <div class="overflow-x-auto border border-base-line rounded-xl bg-layer">
-      <table class="min-w-full divide-y divide-base-line text-sm" id="previewTable">
+    <div class="overflow-x-auto border border-base-line rounded-lg bg-layer">
+      <table class="app-data-table min-w-[1550px] divide-y divide-base-line text-sm" id="previewTable">
         <thead class="bg-base-200/60">
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Title</th>
-            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Permalink</th>
+            <th class="cell-wide px-4 py-3 text-left font-medium text-muted-foreground">Title</th>
+            <th class="cell-wide px-4 py-3 text-left font-medium text-muted-foreground">Permalink</th>
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">Slug</th>
-            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Post ID</th>
+            <th class="cell-tight px-4 py-3 text-left font-medium text-muted-foreground">Post ID</th>
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">Existing valid dates</th>
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">New dates from Excel</th>
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">Final merged dates</th>
-            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Update</th>
+            <th class="cell-tight px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+            <th class="cell-tight px-4 py-3 text-left font-medium text-muted-foreground">Update</th>
           </tr>
         </thead>
         <tbody id="previewTableBody" class="divide-y divide-base-line bg-layer"></tbody>

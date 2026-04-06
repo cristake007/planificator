@@ -1,6 +1,19 @@
 let holidays = [];
 let generatedSchedule = null;
 
+function showElement(el, displayClass = 'block') {
+    if (!el) return;
+    el.classList.remove('app-hidden');
+    if (displayClass === 'flex') {
+        el.classList.add('flex');
+    }
+}
+
+function hideElement(el) {
+    if (!el) return;
+    el.classList.add('app-hidden');
+    el.classList.remove('flex');
+}
 
 document.addEventListener('DOMContentLoaded', function() {});
 
@@ -96,7 +109,7 @@ async function exportSchedule() {
     } catch (error) {
         console.error('Error exporting schedule:', error);
         document.getElementById('errorAlert').textContent = 'Error exporting schedule: ' + error.message;
-        document.getElementById('errorAlert').style.display = 'block';
+        showElement(document.getElementById('errorAlert'));
     }
 }
 
@@ -134,7 +147,7 @@ function displaySchedule(schedule) {
         Total unique courses loaded: ${courseSchedules.size}<br>
         Total scheduled sessions: ${schedule.length}
     `;
-    courseCounter.style.display = 'block';
+    showElement(courseCounter);
 
     // Create rows and maintain the original CSV order
     Array.from(courseSchedules.values())
@@ -143,19 +156,19 @@ function displaySchedule(schedule) {
 
             // Course name cell
             const nameCell = document.createElement('td');
-            nameCell.className = 'course-name-cell';
+            nameCell.className = 'cell-wide';
             nameCell.textContent = course.name;
             row.appendChild(nameCell);
 
             // Duration cell
             const daysCell = document.createElement('td');
-            daysCell.className = 'days-cell';
+            daysCell.className = 'cell-tight';
             daysCell.textContent = course.duration;
             row.appendChild(daysCell);
 
             // Investitie cell
             const investitieCell = document.createElement('td');
-            investitieCell.className = 'text-center';
+            investitieCell.className = 'cell-tight text-center';
             investitieCell.textContent = course.investitie || '';
             row.appendChild(investitieCell);
 
@@ -170,7 +183,7 @@ function displaySchedule(schedule) {
             tableBody.appendChild(row);
         });
 
-    document.getElementById('scheduleResult').style.display = 'block';
+    showElement(document.getElementById('scheduleResult'));
 }
 
 
@@ -190,13 +203,13 @@ scheduleForm.addEventListener('submit', async (e) => {
 
     if (selectedMonths.length === 0) {
         errorAlert.textContent = 'Please select at least one month before generating the schedule.';
-        errorAlert.style.display = 'block';
+        showElement(errorAlert);
         return;
     }
 
     if (!fileInput.files[0]) {
         errorAlert.textContent = 'Please upload an input file (.csv, .xlsx, or .xls) before generating the schedule.';
-        errorAlert.style.display = 'block';
+        showElement(errorAlert);
         return;
     }
 
@@ -207,8 +220,8 @@ scheduleForm.addEventListener('submit', async (e) => {
     formData.append('randomness', document.getElementById('randomness').value);
 
     // Show loading spinner
-    document.getElementById('loadingSpinner').style.display = 'block';
-    document.getElementById('errorAlert').style.display = 'none';
+    showElement(document.getElementById('loadingSpinner'));
+    hideElement(document.getElementById('errorAlert'));
 
     try {
         const response = await fetch('/generate_schedule', {
@@ -228,11 +241,11 @@ scheduleForm.addEventListener('submit', async (e) => {
         if (response.ok && data && data.success) {
             generatedSchedule = data.schedule;
             displaySchedule(data.schedule);
-            exportBtn.style.display = 'inline-block';
-            errorAlert.style.display = 'none';
+            showElement(exportBtn);
+            hideElement(errorAlert);
         } else {
             generatedSchedule = null;
-            exportBtn.style.display = 'none';
+            hideElement(exportBtn);
 
             let message = (data && (data.error || data.message)) || 'Failed to generate schedule. Please verify the file format and selected months, then try again.';
 
@@ -256,16 +269,16 @@ scheduleForm.addEventListener('submit', async (e) => {
             }
 
             errorAlert.innerHTML = message.replace(/\n/g, '<br>');
-            errorAlert.style.display = 'block';
+            showElement(errorAlert);
         }
     } catch (error) {
         generatedSchedule = null;
-        document.getElementById('exportBtn').style.display = 'none';
+        hideElement(document.getElementById('exportBtn'));
         const errorAlert = document.getElementById('errorAlert');
         errorAlert.textContent = 'Error generating schedule: ' + error.message + '. Please check your network and input file, then retry.';
-        errorAlert.style.display = 'block';
+        showElement(errorAlert);
     } finally {
-        document.getElementById('loadingSpinner').style.display = 'none';
+        hideElement(document.getElementById('loadingSpinner'));
     }
 });
 }
@@ -316,9 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('input_file', file);
 
-        loadingSpinner.style.display = 'flex';
-        errorAlert.style.display = 'none';
-        successMessage.style.display = 'none';
+        showElement(loadingSpinner, 'flex');
+        hideElement(errorAlert);
+        hideElement(successMessage);
 
         try {
             console.log('Sending request to /format-xml');
@@ -340,10 +353,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
 
-                successMessage.style.display = 'block';
+                showElement(successMessage);
                 successMessage.style.opacity = '1';
                 setTimeout(() => {
-                    successMessage.style.display = 'none';
+                    hideElement(successMessage);
                 }, 3000);
 
                 form.reset();
@@ -357,14 +370,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showError(error.message);
         } finally {
-            loadingSpinner.style.display = 'none';
+            hideElement(loadingSpinner);
         }
     });
 
     function showError(message) {
         console.error('Showing error:', message);
         errorAlert.textContent = message;
-        errorAlert.style.display = 'block';
+        showElement(errorAlert);
     }
 });
 
@@ -384,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('input_file', file);
 
             // Show the loading spinner
-            loadingSpinner.style.display = 'block';
+            showElement(loadingSpinner);
 
             try {
                 const response = await fetch('/convert_word', {
@@ -407,20 +420,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.URL.revokeObjectURL(url); // Clean up URL
 
                 // Show success message
-                successMessage.style.display = 'block';
+                showElement(successMessage);
                 setTimeout(() => {
-                    successMessage.style.display = 'none';
+                    hideElement(successMessage);
                 }, 5000);
             } catch (error) {
                 // Show error message
                 errorAlert.textContent = error.message;
-                errorAlert.style.display = 'block';
+                showElement(errorAlert);
                 setTimeout(() => {
-                    errorAlert.style.display = 'none';
+                    hideElement(errorAlert);
                 }, 5000);
             } finally {
                 // Hide the loading spinner
-                loadingSpinner.style.display = 'none';
+                hideElement(loadingSpinner);
             }
         });
     }
