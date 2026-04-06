@@ -42,7 +42,7 @@ function updateHolidayDisplay() {
     container.innerHTML = holidays.map((date, index) => `
         <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 text-blue-700 px-2 py-1 text-xs font-medium border border-blue-200">
             ${date}
-            <button type="button" class="inline-flex items-center justify-center size-4 rounded bg-blue-200 text-blue-800 hover:bg-blue-300" style="font-size: 0.6rem;" onclick="removeHoliday(${index})">×</button>
+            <button type="button" class="inline-flex items-center justify-center size-4 rounded bg-blue-200 text-blue-800 hover:bg-blue-300 text-[0.6rem]" onclick="removeHoliday(${index})">×</button>
         </span>
     `).join(' ');
 }

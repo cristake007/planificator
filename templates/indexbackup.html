@@ -235,14 +235,14 @@
             <div class="row mt-3">
                 <div class="col">
                     <button type="submit" class="btn btn-primary">Generate Schedule</button>
-                    <button type="button" class="btn btn-success ms-2" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
-                    <button type="button" class="btn btn-info ms-2" onclick="exportXML()" style="display: none;" id="exportXMLBtn">Export to XML</button>
+                    <button type="button" class="btn btn-success ms-2 d-none" onclick="exportSchedule()" id="exportBtn">Export to Excel</button>
+                    <button type="button" class="btn btn-info ms-2 d-none" onclick="exportXML()" id="exportXMLBtn">Export to XML</button>
                 </div>
             </div>
         </form>
 
         <!-- Loading spinner -->
-        <div id="loadingSpinner" style="display: none;" class="text-center my-4">
+        <div id="loadingSpinner" class="text-center my-4 d-none">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
@@ -250,12 +250,12 @@
         </div>
 
         <!-- Error alert -->
-        <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;" role="alert"></div>
+        <div id="errorAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
 
-        <div id="courseCounter" class="alert alert-info mt-3" style="display: none;" role="alert"></div>
+        <div id="courseCounter" class="alert alert-info mt-3 d-none" role="alert"></div>
 
         <!-- Schedule Results -->
-        <div id="scheduleResult" style="display: none;">
+        <div id="scheduleResult" class="d-none">
             <h2>Generated Schedule</h2>
             <div class="table-responsive-wrapper">
                 <div class="top-scroll">
@@ -353,7 +353,7 @@
             container.innerHTML = holidays.map((date, index) => `
                 <span class="holiday-tag">
                     ${date}
-                    <button type="button" class="btn-close ms-1" style="font-size: 0.5rem;" onclick="removeHoliday(${index})"></button>
+                    <button type="button" class="btn-close ms-1 small" onclick="removeHoliday(${index})"></button>
                 </span>
             `).join(' ');
         }

@@ -20,14 +20,14 @@
     </button>
   </form>
 
-  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert" style="display: none;">
+  <div class="app-hidden rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert">
     XML file has been generated successfully!
   </div>
 
-  <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" style="display: none;" role="alert"></div>
+  <div class="app-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" role="alert"></div>
 </div>
 
-<div class="fixed inset-0 bg-gray-900/40 z-50 hidden" id="loadingSpinner" style="display: none;">
+<div class="app-hidden fixed inset-0 bg-gray-900/40 z-50" id="loadingSpinner">
   <div class="h-full flex items-center justify-center">
     <div class="bg-white rounded-xl p-6 text-center shadow-lg">
       <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full mb-3"></div>
@@ -47,6 +47,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingSpinner = document.getElementById('loadingSpinner');
     const errorAlert = document.getElementById('errorAlert');
     const successMessage = document.getElementById('successMessage');
+    const showElement = (el, displayClass = 'block') => {
+        el.classList.remove('app-hidden');
+        if (displayClass === 'flex') {
+            el.classList.add('flex');
+        }
+    };
+    const hideElement = (el) => {
+        el.classList.add('app-hidden');
+        el.classList.remove('flex');
+    };
 
     if (!form) {
         console.error('Form not found');
@@ -77,9 +87,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('input_file', file);
 
-        loadingSpinner.style.display = 'flex';
-        errorAlert.style.display = 'none';
-        successMessage.style.display = 'none';
+        showElement(loadingSpinner, 'flex');
+        hideElement(errorAlert);
+        hideElement(successMessage);
 
         try {
             console.log('Sending request to /format-xml');
@@ -109,10 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.removeChild(a);
 
                 console.log('Showing success message');
-                successMessage.style.display = 'block';
-                successMessage.style.opacity = '1';
+                showElement(successMessage);
                 setTimeout(() => {
-                    successMessage.style.display = 'none';
+                    hideElement(successMessage);
                 }, 3000);
 
                 form.reset();
@@ -127,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showError(error.message);
         } finally {
             console.log('Request completed');
-            loadingSpinner.style.display = 'none';
+            hideElement(loadingSpinner);
         }
     });
 
@@ -145,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showError(message) {
         console.log('Showing error:', message);
         errorAlert.textContent = message;
-        errorAlert.style.display = 'block';
+        showElement(errorAlert);
     }
 });
 </script>
