@@ -11,31 +11,44 @@
   padding: 0.475rem 0.625rem;
   border-radius: var(--app-radius-md);
   font-size: 0.875rem;
-  color: rgb(51 65 85);
+  color: var(--color-sidebar-nav-foreground);
   transition: background-color 150ms ease, color 150ms ease;
 }
 
 .sidebar-link:hover {
-  background: rgb(241 245 249);
-}
-
-.dark .sidebar-link {
-  color: rgb(226 232 240);
-}
-
-.dark .sidebar-link:hover {
-  background: rgb(30 41 59);
+  background: var(--color-sidebar-nav-hover);
 }
 
 .sidebar-link-active {
-  background: rgb(219 234 254);
-  color: rgb(29 78 216);
+  background: var(--color-sidebar-nav-active);
+  color: var(--color-sidebar-nav-foreground);
   font-weight: 600;
 }
 
-.dark .sidebar-link-active {
-  background: rgb(30 58 138 / 0.45);
-  color: rgb(147 197 253);
+.app-hidden {
+  display: none !important;
+}
+
+.content-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-base-100),
+    var(--color-base-100) 13px,
+    var(--color-base-200) 13px,
+    var(--color-base-200) 14px
+  );
+  background-size: 40px 40px;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-collapsed #app-sidebar {
+    display: none !important;
+  }
+
+  .sidebar-collapsed #app-main {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
 }
 
 /* Slightly tighter spacing + softer corners across controls. */

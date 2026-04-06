@@ -3,46 +3,48 @@
 {% block content %}
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold text-gray-800">Word to Excel Course Converter</h1>
-    <p class="text-sm text-gray-500 mt-1">Upload a Word file and a permalink source file to generate output.</p>
+    <h1 class="text-2xl font-semibold text-base-foreground">Word to Excel Course Converter</h1>
+    <p class="text-sm text-muted-foreground mt-1">Upload a Word file and a permalink source file to generate output.</p>
   </div>
 
   <form id="convertWordForm" method="POST" enctype="multipart/form-data" action="/convert_word" class="space-y-4">
     <div>
-      <label for="wordFile" class="block text-sm font-medium mb-2 text-gray-700">Word File (Courses List)</label>
-      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border-2 border-dashed border-blue-300 bg-blue-50/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" id="wordFile" name="word_file" accept=".docx" required>
+      <label for="wordFile" class="block text-sm font-medium mb-2 text-base-foreground">Word File (Courses List)</label>
+      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary-hover border-2 border-dashed border-base-line bg-base-200/40 focus:border-primary focus:ring-2 focus:ring-base-line" id="wordFile" name="word_file" accept=".docx" required>
     </div>
     <div>
-      <label for="permalinksFile" class="block text-sm font-medium mb-2 text-gray-700">Excel File (Permalinks)</label>
-      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 border-2 border-dashed border-blue-300 bg-blue-50/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" id="permalinksFile" name="permalinks_file" accept=".xlsx,.xls,.csv" required>
+      <label for="permalinksFile" class="block text-sm font-medium mb-2 text-base-foreground">Excel File (Permalinks)</label>
+      <input type="file" class="block w-full rounded-lg text-sm file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary-hover border-2 border-dashed border-base-line bg-base-200/40 focus:border-primary focus:ring-2 focus:ring-base-line" id="permalinksFile" name="permalinks_file" accept=".xlsx,.xls,.csv" required>
     </div>
-    <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">Convert and Match</button>
+    <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover">Convert and Match</button>
   </form>
 
-  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert" style="display: none;">
+  <div class="app-hidden rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert">
     Excel file has been generated successfully!
   </div>
 
-  <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" style="display: none;" role="alert"></div>
+  <div class="app-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" role="alert"></div>
 </div>
 
-<div class="fixed inset-0 bg-gray-900/40 z-50 hidden" id="loadingSpinner" style="display: none;">
+<div class="app-hidden fixed inset-0 bg-base/70 z-50" id="loadingSpinner">
   <div class="h-full flex items-center justify-center">
     <div class="bg-white rounded-xl p-6 text-center shadow-lg">
-      <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full mb-3"></div>
-      <div class="text-sm text-gray-600">Converting to Excel...</div>
+      <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-primary rounded-full mb-3"></div>
+      <div class="text-sm text-muted-foreground">Converting to Excel...</div>
     </div>
   </div>
 </div>
 
 <script>
-    document.getElementById('wordForm').addEventListener('submit', async (e) => {
+    document.getElementById('convertWordForm').addEventListener('submit', async (e) => {
         e.preventDefault(); // Prevent page refresh
         const formData = new FormData();
-        const fileInput = document.getElementById('inputFile').files[0];
-        formData.append('input_file', fileInput);
+        const wordFile = document.getElementById('wordFile').files[0];
+        const permalinksFile = document.getElementById('permalinksFile').files[0];
+        formData.append('word_file', wordFile);
+        formData.append('permalinks_file', permalinksFile);
 
-        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('loadingSpinner').classList.remove('app-hidden');
 
         try {
             const response = await fetch('/convert_word', {
@@ -63,15 +65,15 @@
             a.click();
             window.URL.revokeObjectURL(url); // Clean up URL
 
-            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('successMessage').classList.remove('app-hidden');
             setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('successMessage').classList.add('app-hidden');
             }, 5000);
         } catch (error) {
             document.getElementById('errorAlert').textContent = error.message;
-            document.getElementById('errorAlert').style.display = 'block';
+            document.getElementById('errorAlert').classList.remove('app-hidden');
         } finally {
-            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingSpinner').classList.add('app-hidden');
         }
     });
 </script>
