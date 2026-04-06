@@ -145,6 +145,9 @@
         });
 
         show(previewContainer);
+        if (typeof window.initTableEnhancements === 'function') {
+            window.initTableEnhancements();
+        }
     }
 
     form.addEventListener('submit', async (event) => {

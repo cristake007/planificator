@@ -15,7 +15,86 @@ function hideElement(el) {
     el.classList.remove('flex');
 }
 
-document.addEventListener('DOMContentLoaded', function() {});
+function initTableEnhancements() {
+    document.querySelectorAll('.app-table-wrap').forEach((wrap) => {
+        const topScroller = wrap.querySelector('.app-table-scroll-top');
+        const bottomScroller = wrap.querySelector('.app-table-scroll-bottom');
+        const table = wrap.querySelector('table');
+
+        if (!topScroller || !bottomScroller || !table) {
+            return;
+        }
+
+        let topInner = topScroller.querySelector('.app-table-scroll-top-inner');
+        if (!topInner) {
+            topInner = document.createElement('div');
+            topInner.className = 'app-table-scroll-top-inner';
+            topScroller.appendChild(topInner);
+        }
+
+        const syncScrollWidth = () => {
+            topInner.style.width = `${table.scrollWidth}px`;
+        };
+
+        if (!wrap.dataset.syncEventsBound) {
+            topScroller.addEventListener('scroll', () => {
+                bottomScroller.scrollLeft = topScroller.scrollLeft;
+            });
+            bottomScroller.addEventListener('scroll', () => {
+                topScroller.scrollLeft = bottomScroller.scrollLeft;
+            });
+            wrap.dataset.syncEventsBound = 'true';
+        }
+
+        if (!wrap.dataset.resizeObserverBound && 'ResizeObserver' in window) {
+            const observer = new ResizeObserver(syncScrollWidth);
+            observer.observe(table);
+            wrap.dataset.resizeObserverBound = 'true';
+        }
+
+        syncScrollWidth();
+    });
+
+    document.querySelectorAll('.app-data-table thead th').forEach((th) => {
+        if (th.querySelector('.app-col-resizer')) {
+            return;
+        }
+
+        th.style.minWidth = `${Math.max(th.offsetWidth, 96)}px`;
+        th.style.width = `${th.offsetWidth}px`;
+
+        const resizer = document.createElement('span');
+        resizer.className = 'app-col-resizer';
+
+        let startX = 0;
+        let startWidth = 0;
+
+        const onPointerMove = (event) => {
+            const nextWidth = Math.max(96, startWidth + (event.clientX - startX));
+            th.style.width = `${nextWidth}px`;
+        };
+
+        const onPointerUp = () => {
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+        };
+
+        resizer.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            startX = event.clientX;
+            startWidth = th.offsetWidth;
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+        });
+
+        th.appendChild(resizer);
+    });
+}
+window.initTableEnhancements = initTableEnhancements;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initTableEnhancements();
+});
 
 function selectAllMonths() {
     document.querySelectorAll('.month-checkbox').forEach(checkbox => {
@@ -184,6 +263,7 @@ function displaySchedule(schedule) {
         });
 
     showElement(document.getElementById('scheduleResult'));
+    initTableEnhancements();
 }
 
 
