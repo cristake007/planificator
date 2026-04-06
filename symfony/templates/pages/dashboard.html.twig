@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    <div class="overflow-x-auto">
+        <table class="table table-xs">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Open</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>1</th>
+                    <td>Period Generator</td>
+                    <td>Upload your source file, pick months and holidays, and generate the yearly schedule.</td>
+                    <td><a href="{{ path('generator_perioade') }}" class="btn btn-xs">Open</a></td>
+                </tr>
+                <tr>
+                    <th>2</th>
+                    <td>XML Formatter</td>
+                    <td>Convert spreadsheet rows into a downloadable XML file.</td>
+                    <td><a href="{{ path('xml_formatter') }}" class="btn btn-xs">Open</a></td>
+                </tr>
+                <tr>
+                    <th>3</th>
+                    <td>Word Converter</td>
+                    <td>Match Word course names with permalink data and export the result.</td>
+                    <td><a href="{{ path('word_to_excel') }}" class="btn btn-xs">Open</a></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Open</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

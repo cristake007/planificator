@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Planificator{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body class="min-h-screen bg-base-200 text-base-content">
+    <header class="border-b border-base-300 bg-base-100">
+        <div class="mx-auto max-w-7xl p-2">
+            <div class="overflow-x-auto">
+                <table class="table table-xs">
+                    <thead>
+                        <tr>
+                            <th>Planificator</th>
+                            <th>Tools</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a class="link link-hover font-semibold" href="{{ path('dashboard') }}">Dashboard</a></td>
+                            <td>
+                                <div class="flex flex-wrap gap-2">
+                                    <a class="btn btn-xs" href="{{ path('generator_perioade') }}">Generator</a>
+                                    <a class="btn btn-xs" href="{{ path('xml_formatter') }}">XML Formatter</a>
+                                    <a class="btn btn-xs" href="{{ path('word_to_excel') }}">Word Converter</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl p-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

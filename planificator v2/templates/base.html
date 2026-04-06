@@ -30,6 +30,9 @@
                 <a class="nav-link {% if request.endpoint == 'scheduler.word_to_excel' %}active{% endif %}" href="{{ url_for('scheduler.word_to_excel') }}">
                     <i class="bi bi-file-earmark-code"></i> Word to Excel
                 </a>
+                <a class="nav-link {% if request.endpoint == 'scheduler.safe_course_date_updater' %}active{% endif %}" href="{{ url_for('scheduler.safe_course_date_updater') }}">
+                    <i class="bi bi-shield-check"></i> Safe Course Date Updater
+                </a>
             </div>
         </nav>
 
