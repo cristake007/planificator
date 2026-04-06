@@ -1,171 +1,98 @@
 {% extends "base.html" %}
 {% block title %}<title>Generator</title>{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h1 class="h4 mb-0">Generator perioade cursuri</h1>
-            </div>
-<div class="card-body">
-    <form id="scheduleForm" class="mb-4">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="inputFile" class="form-label">Input File (CSV or Excel)</label>
-                    <input type="file" class="form-control" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
-                <div class="form-text">
-                    <strong>Expected input columns:</strong>
-                    <code>Title</code>, <code>Durata Curs</code>, <code>investitie</code> (optional), <code>Permalink</code>.
-                    CSV and Excel files are supported.
-                </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="year" class="form-label">Year</label>
-                    <input type="number" class="form-control" id="year" min="2024" max="2030" value="2024" required>
-                </div>
-            </div>
-        </div>
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-800">Generator perioade cursuri</h1>
+    <p class="text-sm text-gray-500 mt-1">Upload a spreadsheet, choose months, and generate the schedule.</p>
+  </div>
 
-        <div class="col-md-12">
-            <div class="mb-3">
-                <label class="form-label">Select Months</label>
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="1" id="month1">
-                        <label class="form-check-label" for="month1">January</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="2" id="month2">
-                        <label class="form-check-label" for="month2">February</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="3" id="month3">
-                        <label class="form-check-label" for="month3">March</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="4" id="month4">
-                        <label class="form-check-label" for="month4">April</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="5" id="month5">
-                        <label class="form-check-label" for="month5">May</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="6" id="month6">
-                        <label class="form-check-label" for="month6">June</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="7" id="month7">
-                        <label class="form-check-label" for="month7">July</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="8" id="month8">
-                        <label class="form-check-label" for="month8">August</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="9" id="month9">
-                        <label class="form-check-label" for="month9">September</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="10" id="month10">
-                        <label class="form-check-label" for="month10">October</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="11" id="month11">
-                        <label class="form-check-label" for="month11">November</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input month-checkbox" type="checkbox" value="12" id="month12">
-                        <label class="form-check-label" for="month12">December</label>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllMonths()">Select All</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="deselectAllMonths()">Deselect All</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label for="randomness" class="form-label">Randomness Level (1-10)</label>
-                <div class="d-flex align-items-center">
-                    <input type="range" class="form-range flex-grow-1" id="randomness" min="1" max="10" value="5">
-                    <span class="ms-2" id="randomnessValue">5</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Romanian Holidays (Optional)</label>
-            <div class="holiday-container">
-                <div id="holidayList"></div>
-                <div class="input-group mb-3">
-                    <textarea class="form-control" id="holidayInput" placeholder="Enter dates (DD.MM.YYYY) separated by commas or new lines" rows="1"></textarea>
-                    <button type="button" class="btn btn-primary" onclick="addHolidays()">Add Holidays</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-3">
-            <div class="col">
-                <button type="submit" class="btn btn-primary">Generate Schedule</button>
-                <button type="button" class="btn btn-success ms-2" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
-            </div>
-        </div>
-    </form>
-
-    <!-- Loading spinner -->
-    <div id="loadingSpinner" style="display: none;" class="text-center my-4">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-2">Generating schedule...</p>
+  <form id="scheduleForm" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label for="inputFile" class="block text-sm font-medium mb-2 text-gray-700">Input File (CSV or Excel)</label>
+        <input type="file" class="block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="inputFile" name="input_file" accept=".csv,.xlsx,.xls" required>
+        <p class="mt-2 text-xs text-gray-500"><strong>Expected input columns:</strong> <code>Title</code>, <code>Durata Curs</code>, <code>investitie</code> (optional), <code>Permalink</code>.</p>
+      </div>
+      <div>
+        <label for="year" class="block text-sm font-medium mb-2 text-gray-700">Year</label>
+        <input type="number" class="py-2.5 px-4 block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="year" min="2024" max="2030" value="2024" required>
+      </div>
     </div>
 
-    <!-- Error alert -->
-    <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;" role="alert"></div>
-
-    <div id="courseCounter" class="alert alert-info mt-3" style="display: none;" role="alert"></div>
-
-    <!-- Schedule Results -->
-    <div id="scheduleResult" style="display: none;">
-        <h2>Generated Schedule</h2>
-        <div class="table-container">
-            <!-- Actual scrollbar that will be at the top -->
-            <div class="table-scroll">
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th>Course Name</th>
-                            <th>Days</th>
-                            <th>Investitie</th>
-                            <th>January</th>
-                            <th>February</th>
-                            <th>March</th>
-                            <th>April</th>
-                            <th>May</th>
-                            <th>June</th>
-                            <th>July</th>
-                            <th>August</th>
-                            <th>September</th>
-                            <th>October</th>
-                            <th>November</th>
-                            <th>December</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduleTableBody">
-                        <!-- Schedule rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-3 text-gray-700">Select Months</label>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        {% for month_num, month_name in [(1,'January'),(2,'February'),(3,'March'),(4,'April'),(5,'May'),(6,'June'),(7,'July'),(8,'August'),(9,'September'),(10,'October'),(11,'November'),(12,'December')] %}
+        <label class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+          <input class="month-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" type="checkbox" value="{{ month_num }}" id="month{{ month_num }}">
+          <span class="text-sm text-gray-700">{{ month_name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" onclick="selectAllMonths()">Select All</button>
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50" onclick="deselectAllMonths()">Deselect All</button>
+      </div>
     </div>
-</div>
-</div>
-</div>
+
+    <div class="max-w-md">
+      <label for="randomness" class="block text-sm font-medium mb-2 text-gray-700">Randomness Level (1-10)</label>
+      <div class="flex items-center gap-3">
+        <input type="range" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" id="randomness" min="1" max="10" value="5">
+        <span class="text-sm font-semibold text-gray-700 min-w-[1rem]" id="randomnessValue">5</span>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2 text-gray-700">Romanian Holidays (Optional)</label>
+      <div id="holidayList" class="flex flex-wrap gap-2 mb-2"></div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <textarea class="py-2.5 px-4 block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="holidayInput" placeholder="Enter dates (DD.MM.YYYY) separated by commas or new lines" rows="2"></textarea>
+        <button type="button" class="py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700" onclick="addHolidays()">Add Holidays</button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">Generate Schedule</button>
+      <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-emerald-600 text-white hover:bg-emerald-700" onclick="exportSchedule()" style="display: none;" id="exportBtn">Export to Excel</button>
+    </div>
+  </form>
+
+  <div id="loadingSpinner" style="display: none;" class="text-center py-6">
+    <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"></div>
+    <p class="mt-2 text-sm text-gray-500">Generating schedule...</p>
+  </div>
+
+  <div id="errorAlert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" style="display: none;" role="alert"></div>
+  <div id="courseCounter" class="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700" style="display: none;" role="alert"></div>
+
+  <div id="scheduleResult" style="display: none;" class="space-y-3">
+    <h2 class="text-lg font-semibold text-gray-800">Generated Schedule</h2>
+    <div class="overflow-x-auto border border-gray-200 rounded-xl">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">Course Name</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">Days</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">Investitie</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">January</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">February</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">March</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">April</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">May</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">June</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">July</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">August</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">September</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">October</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">November</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">December</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleTableBody" class="divide-y divide-gray-200 bg-white"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

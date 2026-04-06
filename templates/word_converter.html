@@ -1,85 +1,78 @@
 {% extends "base.html" %}
 {% block title %}<title>Word converter</title>{% endblock %}
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h1 class="h4 mb-0">Word to Excel Course Converter</h1>
-                </div>
-                <div class="card-body">
-                    <form id="convertWordForm" method="POST" enctype="multipart/form-data" action="/convert_word">
-                        <div class="mb-3">
-                            <label for="wordFile" class="form-label">Word File (Courses List)</label>
-                            <input type="file" class="form-control" id="wordFile" name="word_file" accept=".docx" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="permalinksFile" class="form-label">Excel File (Permalinks)</label>
-                            <input type="file" class="form-control" id="permalinksFile" name="permalinks_file" accept=".xlsx,.xls,.csv" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Convert and Match</button>
-                    </form>
-                </div>
-            </div>
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-800">Word to Excel Course Converter</h1>
+    <p class="text-sm text-gray-500 mt-1">Upload a Word file and a permalink source file to generate output.</p>
+  </div>
 
-            <!-- Success Message -->
-            <div class="alert alert-success mt-3 success-message" id="successMessage" role="alert" style="display: none;">
-                <i class="bi bi-check-circle me-2"></i> Excel file has been generated successfully!
-            </div>
-
-            <!-- Error Message -->
-            <div class="alert alert-danger mt-3" id="errorAlert" style="display: none;" role="alert"></div>
-        </div>
+  <form id="convertWordForm" method="POST" enctype="multipart/form-data" action="/convert_word" class="space-y-4">
+    <div>
+      <label for="wordFile" class="block text-sm font-medium mb-2 text-gray-700">Word File (Courses List)</label>
+      <input type="file" class="block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="wordFile" name="word_file" accept=".docx" required>
     </div>
-
-    <!-- Loading Spinner -->
-    <div class="spinner-overlay" id="loadingSpinner" style="display: none;">
-        <div class="spinner-content">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <div>Converting to Excel...</div>
-        </div>
+    <div>
+      <label for="permalinksFile" class="block text-sm font-medium mb-2 text-gray-700">Excel File (Permalinks)</label>
+      <input type="file" class="block w-full border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" id="permalinksFile" name="permalinks_file" accept=".xlsx,.xls,.csv" required>
     </div>
+    <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700">Convert and Match</button>
+  </form>
 
-    <script>
-        document.getElementById('wordForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent page refresh
-            const formData = new FormData();
-            const fileInput = document.getElementById('inputFile').files[0];
-            formData.append('input_file', fileInput);
+  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" id="successMessage" role="alert" style="display: none;">
+    Excel file has been generated successfully!
+  </div>
 
-            document.getElementById('loadingSpinner').style.display = 'block';
+  <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" id="errorAlert" style="display: none;" role="alert"></div>
+</div>
 
-            try {
-                const response = await fetch('/convert_word', {
-                    method: 'POST',
-                    body: formData,
-                });
+<div class="fixed inset-0 bg-gray-900/40 z-50 hidden" id="loadingSpinner" style="display: none;">
+  <div class="h-full flex items-center justify-center">
+    <div class="bg-white rounded-xl p-6 text-center shadow-lg">
+      <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full mb-3"></div>
+      <div class="text-sm text-gray-600">Converting to Excel...</div>
+    </div>
+  </div>
+</div>
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'An unknown error occurred');
-                }
+<script>
+    document.getElementById('wordForm').addEventListener('submit', async (e) => {
+        e.preventDefault(); // Prevent page refresh
+        const formData = new FormData();
+        const fileInput = document.getElementById('inputFile').files[0];
+        formData.append('input_file', fileInput);
 
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'courses.xlsx';
-                a.click();
-                window.URL.revokeObjectURL(url); // Clean up URL
+        document.getElementById('loadingSpinner').style.display = 'block';
 
-                document.getElementById('successMessage').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('successMessage').style.display = 'none';
-                }, 5000);
-            } catch (error) {
-                document.getElementById('errorAlert').textContent = error.message;
-                document.getElementById('errorAlert').style.display = 'block';
-            } finally {
-                document.getElementById('loadingSpinner').style.display = 'none';
+        try {
+            const response = await fetch('/convert_word', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'An unknown error occurred');
             }
-        });
-    </script>
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'courses.xlsx';
+            a.click();
+            window.URL.revokeObjectURL(url); // Clean up URL
+
+            document.getElementById('successMessage').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('successMessage').style.display = 'none';
+            }, 5000);
+        } catch (error) {
+            document.getElementById('errorAlert').textContent = error.message;
+            document.getElementById('errorAlert').style.display = 'block';
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    });
+</script>
 {% endblock %}
