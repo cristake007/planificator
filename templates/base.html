@@ -10,11 +10,11 @@
         const storedTheme = localStorage.getItem('hs_theme');
         const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
         const activeTheme = storedTheme || preferredTheme;
+        const isDark = activeTheme === 'dark';
 
         document.documentElement.setAttribute('data-hs-theme', activeTheme);
-        if (activeTheme === 'dark') {
-          document.documentElement.classList.add('dark');
-        }
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', isDark);
       })();
     </script>
 
@@ -39,7 +39,7 @@
     <link href="/static/css/styles.css" rel="stylesheet">
 </head>
 
-<body class="h-full bg-base text-base-foreground">
+<body class="h-full bg-base text-base-foreground transition-colors duration-200 dark:bg-neutral-900 dark:text-neutral-100">
 <div class="min-h-full">
   <header class="sticky top-0 z-40 bg-base/90 backdrop-blur border-b border-base-line">
     <div class="px-4 sm:px-5 lg:px-6 py-3 flex items-center justify-between gap-3">
@@ -108,6 +108,7 @@
     const isDark = html.classList.toggle('dark');
     const themeValue = isDark ? 'dark' : 'default';
     html.setAttribute('data-hs-theme', themeValue);
+    html.setAttribute('data-theme', isDark ? 'dark' : 'light');
     localStorage.setItem('hs_theme', themeValue);
   });
 </script>
