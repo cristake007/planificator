@@ -17,7 +17,7 @@
       </div>
       <div>
         <label for="year" class="block text-sm font-medium mb-2 text-base-foreground">Year</label>
-        <input type="number" class="py-2.5 px-4 block w-full border-base-line bg-base rounded-lg text-sm focus:border-primary focus:ring-primary" id="year" min="2024" max="2030" value="2024" required>
+        <input type="number" class="py-2.5 px-4 block w-full border-2 border-dashed border-base-line bg-base rounded-lg text-sm focus:border-primary focus:ring-primary" id="year" min="2024" max="2030" value="2024" required>
       </div>
     </div>
 
@@ -32,15 +32,15 @@
         {% endfor %}
       </div>
       <div class="mt-3 flex gap-2">
-        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-secondary-line bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover" onclick="selectAllMonths()">Select All</button>
-        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-secondary-line bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover" onclick="deselectAllMonths()">Deselect All</button>
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border-2 border-dashed border-secondary-line bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover" onclick="selectAllMonths()">Select All</button>
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border-2 border-dashed border-secondary-line bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover" onclick="deselectAllMonths()">Deselect All</button>
       </div>
     </div>
 
     <div class="max-w-md">
       <label for="randomness" class="block text-sm font-medium mb-2 text-base-foreground">Randomness Level (1-10)</label>
       <div class="flex items-center gap-3">
-        <input type="range" class="w-full h-2 bg-base-200 rounded-lg appearance-none cursor-pointer" id="randomness" min="1" max="10" value="5">
+        <input type="range" class="w-full cursor-pointer" id="randomness" min="1" max="10" value="5">
         <span class="text-sm font-semibold text-base-foreground min-w-[1rem]" id="randomnessValue">5</span>
       </div>
     </div>
@@ -50,13 +50,13 @@
       <div id="holidayList" class="flex flex-wrap gap-2 mb-2"></div>
       <div class="flex flex-col sm:flex-row gap-2">
         <textarea class="py-2.5 px-4 block w-full border-base-line bg-base rounded-lg text-sm focus:border-primary focus:ring-primary" id="holidayInput" placeholder="Enter dates (DD.MM.YYYY) separated by commas or new lines" rows="2"></textarea>
-        <button type="button" class="py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover" onclick="addHolidays()">Add Holidays</button>
+        <button type="button" class="py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border-2 border-dashed border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover" onclick="addHolidays()">Add Holidays</button>
       </div>
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover">Generate Schedule</button>
-      <button type="button" class="app-hidden py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-accent-line bg-accent text-accent-foreground hover:bg-accent-hover" onclick="exportSchedule()" id="exportBtn">Export to Excel</button>
+      <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border-2 border-dashed border-primary-line bg-primary text-primary-foreground hover:bg-primary-hover">Generate Schedule</button>
+      <button type="button" class="app-hidden py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border-2 border-dashed border-accent-line bg-accent text-accent-foreground hover:bg-accent-hover" onclick="exportSchedule()" id="exportBtn">Export to Excel</button>
     </div>
   </form>
 
@@ -70,9 +70,11 @@
 
   <div id="scheduleResult" class="app-hidden space-y-3">
     <h2 class="text-lg font-semibold text-base-foreground">Generated Schedule</h2>
-    <div class="overflow-x-auto border border-base-line rounded-lg bg-layer">
-      <table class="app-data-table min-w-[1200px] divide-y divide-base-line text-sm">
-        <thead class="bg-base-200/60">
+    <div class="app-table-wrap">
+      <div class="app-table-scroll-top"></div>
+      <div class="app-table-scroll-bottom">
+        <table class="app-data-table min-w-[1200px] divide-y divide-base-line text-sm">
+          <thead class="bg-base-200/60">
           <tr>
             <th class="cell-wide px-4 py-3 text-left font-medium text-muted-foreground">Course Name</th>
             <th class="cell-tight px-4 py-3 text-left font-medium text-muted-foreground">Days</th>
@@ -90,9 +92,10 @@
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">November</th>
             <th class="px-4 py-3 text-left font-medium text-muted-foreground">December</th>
           </tr>
-        </thead>
-        <tbody id="scheduleTableBody" class="divide-y divide-base-line bg-layer"></tbody>
-      </table>
+          </thead>
+          <tbody id="scheduleTableBody" class="divide-y divide-base-line bg-layer"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
