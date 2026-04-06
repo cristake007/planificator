@@ -9,6 +9,14 @@
     const previewContainer = document.getElementById('previewContainer');
     const tableBody = document.getElementById('previewTableBody');
 
+    function show(el) {
+        el.classList.remove('app-hidden');
+    }
+
+    function hide(el) {
+        el.classList.add('app-hidden');
+    }
+
     function escapeHtml(value) {
         return String(value || '')
             .replace(/&/g, '&amp;')
@@ -20,7 +28,7 @@
 
     function formatList(values) {
         if (!values || values.length === 0) {
-            return '<span class="text-muted">-</span>';
+            return '<span class="text-muted-foreground">-</span>';
         }
         return values.map(v => `<div>${escapeHtml(v)}</div>`).join('');
     }
@@ -37,11 +45,11 @@
             const resolveDisabled = row.post_id || !row.permalink ? 'disabled' : '';
             const postIdContent = row.post_id
                 ? `${row.post_id}`
-                : `<button class="btn btn-sm btn-outline-secondary resolve-post-id-btn" ${resolveDisabled}>Get post ID</button>`;
+                : `<button class="app-btn-xs resolve-post-id-btn" ${resolveDisabled}>Get post ID</button>`;
 
             tr.innerHTML = `
                 <td>${escapeHtml(row.title)}</td>
-                <td><small>${escapeHtml(row.permalink)}</small></td>
+                <td><small class="text-xs text-muted-foreground">${escapeHtml(row.permalink)}</small></td>
                 <td><code>${escapeHtml(row.slug)}</code></td>
                 <td class="post-id-cell">${postIdContent}</td>
                 <td>${formatList(row.existing_valid_dates)}</td>
@@ -49,13 +57,13 @@
                 <td>
                     ${formatList(row.final_dates)}
                     <details class="mt-2">
-                        <summary>Show payload</summary>
-                        <pre class="small mb-0">${escapeHtml(JSON.stringify(row.payload, null, 2))}</pre>
+                        <summary class="cursor-pointer text-xs text-muted-foreground">Show payload</summary>
+                        <pre class="mt-2 rounded-md border border-base-line bg-base-200/40 p-2 text-xs">${escapeHtml(JSON.stringify(row.payload, null, 2))}</pre>
                     </details>
                 </td>
-                <td class="status-cell">${escapeHtml(statusText)}</td>
+                <td class="status-cell">${escapeHtml(statusText || '')}</td>
                 <td>
-                    <button class="btn btn-sm btn-success update-row-btn" ${disabled}>Update</button>
+                    <button class="app-btn-xs app-btn-xs-primary update-row-btn" ${disabled}>Update</button>
                 </td>
             `;
 
@@ -136,12 +144,12 @@
             tableBody.appendChild(tr);
         });
 
-        previewContainer.classList.remove('d-none');
+        show(previewContainer);
     }
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        errorBox.classList.add('d-none');
+        hide(errorBox);
         previewBtn.disabled = true;
         tableBody.innerHTML = '';
 
@@ -170,7 +178,7 @@
             renderRows(data.rows || []);
         } catch (error) {
             errorBox.textContent = error.message;
-            errorBox.classList.remove('d-none');
+            show(errorBox);
         } finally {
             previewBtn.disabled = false;
         }
