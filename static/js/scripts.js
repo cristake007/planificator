@@ -40,9 +40,9 @@ function removeHoliday(index) {
 function updateHolidayDisplay() {
     const container = document.getElementById('holidayList');
     container.innerHTML = holidays.map((date, index) => `
-        <span class="holiday-tag">
+        <span class="inline-flex items-center gap-1 rounded-md bg-blue-100 text-blue-700 px-2 py-1 text-xs font-medium border border-blue-200">
             ${date}
-            <button type="button" class="btn-close ms-1 btn-close-white" style="font-size: 0.5rem;" onclick="removeHoliday(${index})"></button>
+            <button type="button" class="inline-flex items-center justify-center size-4 rounded bg-blue-200 text-blue-800 hover:bg-blue-300" style="font-size: 0.6rem;" onclick="removeHoliday(${index})">×</button>
         </span>
     `).join(' ');
 }
@@ -178,6 +178,7 @@ const scheduleForm = document.getElementById('scheduleForm');
 if (scheduleForm) {
 scheduleForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const errorAlert = document.getElementById('errorAlert');
 
     const formData = new FormData();
     const fileInput = document.getElementById('inputFile');
@@ -188,12 +189,14 @@ scheduleForm.addEventListener('submit', async (e) => {
         .map(checkbox => checkbox.value);
 
     if (selectedMonths.length === 0) {
-        alert('Please select at least one month');
+        errorAlert.textContent = 'Please select at least one month before generating the schedule.';
+        errorAlert.style.display = 'block';
         return;
     }
 
     if (!fileInput.files[0]) {
-        alert('Please select a file');
+        errorAlert.textContent = 'Please upload an input file (.csv, .xlsx, or .xls) before generating the schedule.';
+        errorAlert.style.display = 'block';
         return;
     }
 
@@ -220,7 +223,6 @@ scheduleForm.addEventListener('submit', async (e) => {
             console.error('Failed to parse response JSON:', parseError);
         }
 
-        const errorAlert = document.getElementById('errorAlert');
         const exportBtn = document.getElementById('exportBtn');
 
         if (response.ok && data && data.success) {
@@ -232,7 +234,7 @@ scheduleForm.addEventListener('submit', async (e) => {
             generatedSchedule = null;
             exportBtn.style.display = 'none';
 
-            let message = (data && (data.error || data.message)) || 'Failed to generate schedule.';
+            let message = (data && (data.error || data.message)) || 'Failed to generate schedule. Please verify the file format and selected months, then try again.';
 
             if (data && data.unscheduled_courses) {
                 const monthNames = [
@@ -260,7 +262,7 @@ scheduleForm.addEventListener('submit', async (e) => {
         generatedSchedule = null;
         document.getElementById('exportBtn').style.display = 'none';
         const errorAlert = document.getElementById('errorAlert');
-        errorAlert.textContent = 'Error generating schedule: ' + error.message;
+        errorAlert.textContent = 'Error generating schedule: ' + error.message + '. Please check your network and input file, then retry.';
         errorAlert.style.display = 'block';
     } finally {
         document.getElementById('loadingSpinner').style.display = 'none';
